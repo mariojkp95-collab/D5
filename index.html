@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Drakoria — OneFile (HUD-9c)</title>
+<title>Drakoria — OneFile (HUD-10a)</title>
 <style>
 :root{
   --bg:#0b1224; --panel:#0f172a; --stroke:#1f2a44; --text:#e5e7eb; --muted:#9ca3af;
@@ -58,7 +58,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 .r-legend{outline:1px solid var(--legend)}
 .loot-f{display:flex;gap:8px;justify-content:flex-end;padding:10px;border-top:1px solid #1f2a44}
 
-/* Inventario lite */
+/* Inventario */
 .inv{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:560px; max-width:95vw;
      background:#0f172a; border:1px solid #1f2a44; border-radius:12px; box-shadow:0 18px 44px rgba(0,0,0,.45); z-index:42}
 .inv-h{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #1f2a44;font-weight:700}
@@ -91,7 +91,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 </head>
 <body>
 <header>
-  <div><strong>Drakoria</strong> <span class="muted">one-file HUD-9c</span></div>
+  <div><strong>Drakoria</strong> <span class="muted">one-file HUD-10a</span></div>
   <div>
     <button id="btnInv" class="btn">Inventario</button>
     <button id="btnSettings" class="btn">⚙︎</button>
@@ -104,8 +104,9 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 <main>
   <canvas id="game" width="1344" height="768" aria-label="Gioco"></canvas>
   <p class="help">
-    Tap per muoverti (cerchio di destinazione) • tap nemico per target • doppio tap/press prolungato per auto-inseguire • SPAZIO/🗡️ attacca.  
-    Portale viola → mondo <b>Main</b> (arcieri). Mini-mappa rotonda sempre attiva. Bleed 🩸 può essere applicato dagli arcieri.
+    Tap per muoverti • tap nemico per target • press lungo/doppio tap per auto-inseguire • SPAZIO/🗡️ attacca.  
+    Portale viola → mondo <b>Main</b> (arcieri). Mini-mappa rotonda sempre attiva. <b>!</b> sugli arcieri in aggro.  
+    Gli arcieri telegrafano i colpi (ring 0.4s) prima di scoccare. Autosave su portali e kill.
   </p>
   <div id="status"></div>
 </main>
@@ -164,10 +165,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 </section>
 
 <script>
-/* ===== Drakoria — ONE FILE BUILD (HUD-9c) ===== */
+/* ===== Drakoria — ONE FILE BUILD (HUD-10a) ===== */
 (function(){
-  var BUILD='HUD-9c';
-  var SAVE_KEY='save_of_hud9c';
+  var BUILD='HUD-10a';
+  var SAVE_KEY='save_of_hud10a';
   var cv=document.getElementById('game'); var ctx=cv.getContext('2d');
 
   /* UI refs */
@@ -245,7 +246,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 
   // SOLO ARCHERS (ranged)
   function makeArcher(x,y){ var e={kind:'archer',type:'ranged',x:x,y:y,spawnX:x,spawnY:y,hp:44,maxHp:44,atkCd:1200,lastShot:0,rangeMin:3,rangeMax:7,
-    pokeCd:700,lastPoke:0,aggro:false,aggroRange:7,leashRange:15,loseAggroMs:6000,lastSeenTs:0,moveTick:0,moveEvery:6,path:[],mode:'idle'};
+    pokeCd:700,lastPoke:0,aggro:false,aggroRange:7,leashRange:15,loseAggroMs:6000,lastSeenTs:0,moveTick:0,moveEvery:6,path:[],mode:'idle',
+    windupMs:400, windupStart:null, aggroVis:0 };
     e.vx=x; e.vy=y; return giveId(e); }
 
   /* Gruppi in pattuglia + spawn util */
@@ -266,7 +268,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     for(var k=0;k<tries;k++){
       var nx=Math.max(0,Math.min(COLS-1,cx+rndInt(-r,r)));
       var ny=Math.max(0,Math.min(ROWS-1,cy+rndInt(-r,r)));
-      if(walkable(nx,ny) && tileFree(nx,ny) && !isPortalTile(WORLD.current,nx,ny)){ return {x:nx,y:ny}; }
+      if(walkable(nx,ny) && tileFree(nx,ny) && !isPortalTile(WORLD.current,nx,ny)){ return {x:nx, y:ny}; }
     }
     return randEmpty();
   }
@@ -327,7 +329,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function getVar(n){ var cs=window.getComputedStyle(document.documentElement); return cs.getPropertyValue(n).trim(); }
   function randEmpty(){ for(var tries=0; tries<200; tries++){ var x=rndInt(0,COLS-1), y=rndInt(0,ROWS-1); if(walkable(x,y)&&tileFree(x,y)) return {x:x,y:y}; } return {x:1,y:1}; }
 
-  /* BFS — FIX: push corretto {x:nx, y:ny} */
+  /* BFS — corretto */
   function bfs(sx,sy,tx,ty){
     if(!walkable(tx,ty)) return null;
     var q=[{x:sx,y:sy}], head=0, prev={}, seen={}; seen[sx+','+sy]=1;
@@ -340,7 +342,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       for(var d=0; d<4; d++){
         var nx=c.x+dirs[d][0], ny=c.y+dirs[d][1], kk=nx+','+ny;
         if(!walkable(nx,ny)||seen[kk]) continue; seen[kk]=1; prev[kk]={x:c.x,y:c.y};
-        q.push({x:nx, y:ny}); // <<< fix
+        q.push({x:nx, y:ny});
       }
     } return null;
   }
@@ -452,6 +454,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       trySpawnLootBag(t.x,t.y, t.kind||t.type);
       logSys(nameOf(t)+' è stato sconfitto.');
       enemies.splice(enemies.indexOf(t),1);
+      autoSave('post-kill');
     }
   }
 
@@ -517,12 +520,20 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   lootTakeAll.onclick=function(){ var bag=getBagAt(player.x,player.y); if(!bag) return; while(bag.items.length) applyItem(bag.items.shift()); lootBags.splice(lootBags.indexOf(bag),1); lootWin.classList.add('hidden'); renderInventoryIfOpen(); draw(); };
   function renderInventoryIfOpen(){ if(!invWin.classList.contains('hidden')) renderInventory(); }
 
-  /* Save/Load */
-  btnSave.onclick=function(){ try{
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ map:map, player:player, enemies:enemies, coins:coins, potions:potions, projectiles:projectiles,
-      lootBags:lootBags, world:WORLD.current, worldInited:worldInited, inventory:inventory, equipped:equipped, settings:SETTINGS }));
-    toast('Salvato.');
-  }catch(e){ panic('save', e); } };
+  /* SAVE / LOAD / AUTOSAVE */
+  function snapshot(){
+    return {
+      map:map, player:player, enemies:enemies, coins:coins, potions:potions, projectiles:projectiles,
+      lootBags:lootBags, world:WORLD.current, worldInited:worldInited, inventory:inventory, equipped:equipped, settings:SETTINGS
+    };
+  }
+  function autoSave(reason){
+    try{
+      localStorage.setItem(SAVE_KEY, JSON.stringify(snapshot()));
+      logSys('Autosave: '+reason);
+    }catch(e){ panic('autosave', e); }
+  }
+  btnSave.onclick=function(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(snapshot())); toast('Salvato.'); }catch(e){ panic('save', e); } };
   btnLoad.onclick=function(){ try{
     var raw=localStorage.getItem(SAVE_KEY); if(!raw) return alert('Nessun salvataggio.');
     var d=JSON.parse(raw), i,y,x;
@@ -597,9 +608,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     onEnterWorld(WORLD.current);
     pathQueue.length=0; teleportGuardUntil=performance.now()+450;
     logSys('Teletrasporto: '+(WORLD.current==='spawn'?'Spawn':'Main'));
+    autoSave('portal->'+WORLD.current);
   }
 
-  /* STEP LOOP con accumulator via rAF (no doppie definizioni) */
+  /* STEP LOOP con accumulator via rAF */
   var SIM_BASE=120;           // ms per tick a speed 1
   var simStepMs=SIM_BASE;     // aggiornato da setSpeed()
   var simAcc=0;               // accumulatore
@@ -636,7 +648,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         }
       }
 
-      // Player path consume (continua fino a destinazione)
+      // Player: consuma path
       if(pathQueue.length){
         var next=pathQueue.shift(), blocked=false;
         if(!walkable(next.x,next.y)) blocked=true;
@@ -654,25 +666,41 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       var now=performance.now();
       for(var j=0;j<enemies.length;j++){
         var e=enemies[j], distC=chebyshev(e,player);
-        if(!e.aggro && distC<=e.aggroRange){ e.aggro=true; e.lastSeenTs=now; }
 
+        // visibilità Aggro (!) — smoothing
+        e.aggroVis += ((e.aggro?1:0) - e.aggroVis) * 0.15;
+
+        if(!e.aggro && distC<=e.aggroRange){ e.aggro=true; e.lastSeenTs=now; }
         var tooFar = chebyshev({x:e.spawnX,y:e.spawnY}, player) > e.leashRange || distC > e.leashRange;
         if(e.aggro){
-          if(distC<=1) e.lastSeenTs=now;
-          if(tooFar || (now-e.lastSeenTs)>e.loseAggroMs){ e.aggro=false; e.path=bfs(e.x,e.y,e.spawnX,e.spawnY)||[]; e.mode='return'; }
+          if(distC<=1 || e.x===player.x || e.y===player.y) e.lastSeenTs=now;
+          if(tooFar || (now-e.lastSeenTs)>e.loseAggroMs){
+            e.aggro=false; e.path=bfs(e.x,e.y,e.spawnX,e.spawnY)||[]; e.mode='return'; e.windupStart=null; // cancella telegraph
+          }
         }
 
         e.moveTick=(e.moveTick+1)%Math.max(1,Math.round(e.moveEvery/SETTINGS.speed));
         var canMove=(e.moveTick===0);
 
         var distM=Math.abs(e.x-player.x)+Math.abs(e.y-player.y);
-        var inRange=(distM>=e.rangeMin && distM<=e.rangeMax && (e.x===player.x || e.y===player.y));
+        var sameLine = (e.x===player.x || e.y===player.y);
+        var inRange=(distM>=e.rangeMin && distM<=e.rangeMax && sameLine);
+
         if(inRange){
-          if(now-e.lastShot>=e.atkCd){
+          // Telegraph: inizializza quando CD è pronto
+          if(e.windupStart==null && (now-e.lastShot)>=e.atkCd){
+            e.windupStart = now;
+          }
+          // Se perdi la linea/condizioni, cancella il windup
+          if(!sameLine){ e.windupStart=null; }
+          // Completa il windup e spara
+          if(e.windupStart!=null && (now - e.windupStart) >= (e.windupMs||400)){
             e.lastShot=now;
             var dx2=0,dy2=0; if(e.x===player.x) dy2=player.y>e.y?1:-1; else if(e.y===player.y) dx2=player.x>e.x?1:-1;
             if(dx2||dy2) projectiles.push({x:e.x,y:e.y,dx:dx2,dy:dy2,spdTick:0,dmg:rndInt(6,10), vx:e.x, vy:e.y, vStart:0, vEnd:0, from:'archer'});
+            e.windupStart=null;
           }
+
           if(distM<e.rangeMin && canMove){ var backX=e.x+(player.x<e.x?1:(player.x>e.x?-1:0)), backY=e.y+(player.y<e.y?1:(player.y>e.y?-1:0));
             if(walkable(backX,backY) && !(backX===player.x&&backY===player.y)){ var fx=e.x,fy=e.y; e.x=backX; e.y=backY; startTween(e,fx,fy,e.x,e.y,performance.now()); } }
           var adj=(Math.max(Math.abs(e.x-player.x),Math.abs(e.y-player.y))===1);
@@ -683,6 +711,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
           var pth=bfsToAdjacencySmart(e.x,e.y,player.x,player.y,'ranged')||bfs(e.x,e.y,player.x,player.y);
           if(pth&&pth.length>2) pth.length=2; e.path=pth||e.path||[];
           tryStepAlongPath(e);
+          // se esci dal range, cancella telegraph
+          if(!inRange) e.windupStart=null;
         }
       }
 
@@ -796,6 +826,16 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       var ex=(en.vx!=null?en.vx:en.x), ey=(en.vy!=null?en.vy:en.y);
       drawActor(ex,ey,col);
       drawHpBar(ex,ey,en.hp,en.maxHp,true,(target===en));
+      // (4) Indicatore Aggro "!"
+      if(en.aggroVis>0.02){
+        ctx.save(); ctx.globalAlpha=en.aggroVis; ctx.font='bold 18px system-ui'; ctx.textAlign='center'; ctx.fillStyle='#fff';
+        ctx.fillText('!', ex*TILE+TILE/2, ey*TILE+TILE/2-40); ctx.restore();
+      }
+      // (8) Telegraph ring (wind-up)
+      if(en.windupStart!=null){
+        var prog = Math.max(0, Math.min(1, (now - en.windupStart) / (en.windupMs||400)));
+        drawWindupRing(ex, ey, prog);
+      }
       if(target===en){ drawTargetRing(ex,ey); }
     }
 
@@ -832,6 +872,18 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 
     ctx.fillStyle='#ffffffcc'; ctx.font='bold 14px system-ui'; ctx.fillText('BUILD '+BUILD, 8, cv.height-10);
     statusEl.textContent='LV '+player.lvl+' | HP '+player.hp+'/'+player.maxHp+' | ATK '+player.atkMin+'–'+player.atkMax+' | coins '+player.coins+' | pots '+player.pots;
+  }
+
+  function drawWindupRing(tx,ty,prog){
+    var x=tx*TILE+TILE/2, y=ty*TILE+TILE/2;
+    ctx.save();
+    ctx.globalAlpha=0.9;
+    ctx.strokeStyle='#a855f7';
+    ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(x,y,22,-Math.PI/2, -Math.PI/2 + prog*2*Math.PI); ctx.stroke();
+    ctx.globalAlpha=0.25;
+    ctx.beginPath(); ctx.arc(x,y,22,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
   }
 
   function drawStatusIcons(tx,ty){
