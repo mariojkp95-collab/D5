@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Drakoria — Stats+Fix (One File)</title>
+<title>Drakoria — Portals+Aggro Fix</title>
 <style>
 :root{
   --bg:#0b1224; --panel:#0f172a; --stroke:#1f2a44; --text:#e5e7eb; --muted:#9ca3af;
@@ -59,7 +59,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 </head>
 <body>
 <header>
-  <div><strong>Drakoria</strong> <span class="muted">stats+fix</span></div>
+  <div><strong>Drakoria</strong> <span class="muted">portals+aggro fix</span></div>
   <div>
     <button id="btnChar" class="btn">Personaggio</button>
     <button id="btnSave" class="btn">Save</button>
@@ -72,7 +72,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   <canvas id="game" width="1344" height="768" aria-label="Gioco"></canvas>
   <p class="help">
     Tap per muoverti • tap su un nemico per target • doppio tap/press prolungato per auto-inseguire • SPAZIO/🗡️ attacca.  
-    Portale viola tra Spawn ↔ Main. Pannello <b>Personaggio</b> per le statistiche & XP.
+    Portale viola tra Spawn ↔ Main. Pannello <b>Personaggio</b> per statistiche & XP.
   </p>
   <div id="status"></div>
 </main>
@@ -104,8 +104,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 
 <script>
 (function(){
-  const BUILD='STATS-2';
-  const SAVE_KEY='save_stats_build2';
+  const BUILD='PORTALS-AGGRO-FIX';
+  const SAVE_KEY='save_portals_aggro_fix';
   const cv=document.getElementById('game'); const ctx=cv.getContext('2d');
 
   /* UI */
@@ -206,66 +206,49 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   }
   function updateTweens(){ const now=performance.now(); tweenUpdate(player,now); for(let i=0;i<enemies.length;i++) tweenUpdate(enemies[i],now); for(let j=0;j<projectiles.length;j++) tweenUpdate(projectiles[j],now); }
 
-  /* Player + Stats */
+  /* Player + Stats (ridotto) */
   const player={
     x:12,y:4,
     baseMaxHp:100, baseAtkMin:6, baseAtkMax:12,
     maxHp:100, hp:100, atkMin:6, atkMax:12,
-    baseCrit:0.10, // 10% base
+    baseCrit:0.10,
     coins:0,pots:1,lastAtk:0,atkCd:450,lvl:1,exp:0,
-    stats:{
-      atkSpeed: 0.00,   // +% velocità attacco (cap 0.50)
-      critDmg: 0.50,    // +50% default
-      luck:    0.00,    // +% crit chance
-      defense: 0,       // flat
-      mitigation: 0.00, // % (cap 0.60)
-      projRes: 0.00,    // % (cap 0.60)
-      bleedRes:0.00     // % (cap 0.70)
-    },
+    stats:{ atkSpeed:0.00, critDmg:0.50, luck:0.00, defense:0, mitigation:0.00, projRes:0.00, bleedRes:0.00 },
     status:{ bleed:null }
   };
-  function getCritChance(){ return clamp(player.baseCrit + (player.stats.luck||0), 0, 0.90); }
-  function getAtkCd(){ const eff = player.atkCd * (1 - clamp(player.stats.atkSpeed||0,0,0.50)); return Math.max(180, Math.floor(eff)); }
-  function recomputeStats(heal){
-    player.maxHp = Math.round(player.baseMaxHp);
-    player.atkMin = Math.round(player.baseAtkMin);
-    player.atkMax = Math.round(player.baseAtkMax);
-    if(heal) player.hp = player.maxHp;
-    if(player.hp>player.maxHp) player.hp=player.maxHp;
-    renderCharIfOpen();
-  }
-
-  /* Progressione */
   const MAX_LVL=99;
   function xpNeeded(l){ return Math.floor(50 * Math.pow(l, 1.5)); }
-  function levelUp(){
-    player.lvl = Math.min(MAX_LVL, player.lvl+1);
-    // Per livello (piccoli)
-    player.baseMaxHp += 2;
-    player.baseAtkMin += 0.2;
-    player.baseAtkMax += 0.3;
-    // Ogni 5 livelli (piccoli buff difensivi/offensivi)
-    if(player.lvl % 5 === 0){
-      player.stats.defense += 1;
-      player.stats.mitigation = clamp((player.stats.mitigation||0) + 0.01, 0, 0.60);
-      player.stats.atkSpeed   = clamp((player.stats.atkSpeed  ||0) + 0.01, 0, 0.50);
-      player.stats.projRes    = clamp((player.stats.projRes   ||0) + 0.01, 0, 0.60);
-      player.stats.bleedRes   = clamp((player.stats.bleedRes  ||0) + 0.01, 0, 0.70);
-      player.stats.luck       = clamp((player.stats.luck      ||0) + 0.005, 0, 0.50);
-    }
-    // heal 10% alla salita
-    player.hp = Math.min(player.maxHp, player.hp + Math.round(player.maxHp * 0.10));
-    recomputeStats(false);
-    toast('Level up! LV '+player.lvl);
-    logSys('Level up → LV '+player.lvl);
-  }
   function gainXP(n){
     if(player.lvl>=MAX_LVL) return;
-    player.exp += n;
-    while(player.lvl<MAX_LVL && player.exp >= xpNeeded(player.lvl)){
-      player.exp -= xpNeeded(player.lvl);
-      levelUp();
+    player.exp+=n;
+    while(player.lvl<MAX_LVL && player.exp>=xpNeeded(player.lvl)){
+      player.exp-=xpNeeded(player.lvl); levelUp();
     }
+    renderCharIfOpen();
+  }
+  function levelUp(){
+    player.lvl=Math.min(MAX_LVL, player.lvl+1);
+    player.baseMaxHp += 2; player.baseAtkMin += .2; player.baseAtkMax += .3;
+    if(player.lvl%5===0){
+      player.stats.defense += 1;
+      player.stats.mitigation = clamp((player.stats.mitigation||0)+.01,0,0.60);
+      player.stats.atkSpeed   = clamp((player.stats.atkSpeed  ||0)+.01,0,0.50);
+      player.stats.projRes    = clamp((player.stats.projRes   ||0)+.01,0,0.60);
+      player.stats.bleedRes   = clamp((player.stats.bleedRes  ||0)+.01,0,0.70);
+      player.stats.luck       = clamp((player.stats.luck      ||0)+.005,0,0.50);
+    }
+    player.hp=Math.min(player.maxHp, player.hp + Math.round(player.maxHp*0.10));
+    recomputeStats(false);
+    logSys('Level up → LV '+player.lvl);
+    toast('LV '+player.lvl);
+  }
+  function getCritChance(){ return clamp(player.baseCrit + (player.stats.luck||0), 0, 0.90); }
+  function getAtkCd(){ const eff=player.atkCd*(1-clamp(player.stats.atkSpeed||0,0,0.50)); return Math.max(180, Math.floor(eff)); }
+  function recomputeStats(heal){
+    player.maxHp=Math.round(player.baseMaxHp);
+    player.atkMin=Math.round(player.baseAtkMin);
+    player.atkMax=Math.round(player.baseAtkMax);
+    if(heal) player.hp=player.maxHp; if(player.hp>player.maxHp) player.hp=player.maxHp;
     renderCharIfOpen();
   }
 
@@ -275,9 +258,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function makeArcher(x,y){
     const e={ kind:'archer', type:'ranged', x,y, spawnX:x, spawnY:y,
       hp:44, maxHp:44, atkCd:1200, lastShot:0, rangeMin:3, rangeMax:7,
-      pokeCd:700, lastPoke:0,
-      aggro:false, aggroRange:7, leashRange:15, loseAggroMs:6000, lastSeenTs:0,
-      moveTick:0, moveEvery:6, path:[], mode:'idle', windupMs:400, windupStart:null
+      aggro:false, aggroRange:5, leashRange:15, loseAggroMs:6000, lastSeenTs:0,
+      moveTick:0, moveEvery:6, path:[], windupMs:400
     };
     e.vx=x; e.vy=y; return giveId(e);
   }
@@ -291,7 +273,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   }
   function spawnMain(){
     enemies.length=0;
-    // due gruppi verso destra, lontani dal portale a sinistra
+    // gruppi sul lato destro, lontani dal portale (che è a x=1)
     createPatrolGroup(5, COLS-5, 2, 2);
     createPatrolGroup(5, COLS-5, ROWS-3, 2);
   }
@@ -306,13 +288,12 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     const res=buildMap('spawn'); map=res.map; applyTheme(res.theme); WORLD.current='spawn'; enemies.length=0; recomputeStats(true);
   })();
 
-  /* Input & HUD in-canvas */
-  const HUD={ atk:null, pot:null, loot:null, char:null };
+  /* Input & HUD */
+  const HUD={ atk:null, pot:null, char:null };
   function layoutHud(){
     HUD.atk  = { x: cv.width - 86,  y: cv.height - 86, w: 72, h: 72 };
     HUD.pot  = { x: cv.width - 166, y: cv.height - 86, w: 72, h: 72 };
-    HUD.loot = { x: 14,             y: cv.height - 86, w: 72, h: 72 };
-    HUD.char = { x: cv.width - 86,  y: 14,             w: 72, h: 54 };
+    HUD.char = { x: cv.width - 86,  y: 14,             w: 72, h: 54  };
   }
   window.addEventListener('resize', layoutHud, false);
   layoutHud();
@@ -347,12 +328,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     clearTimeout(holdTimer);
     const m=canvasToTile(ev), now=performance.now();
 
-    // HUD
     if(inRect(m.sx,m.sy,HUD.atk)){ tryAttackAdjacent(); return; }
     if(inRect(m.sx,m.sy,HUD.pot)){ usePotion(); return; }
     if(inRect(m.sx,m.sy,HUD.char)){ charWin.classList.toggle('hidden'); renderCharPanel(); return; }
 
-    // Target / movimento
     const clicked=getEnemyAtScreen(m.sx,m.sy);
     if(clicked){
       if(lastEnemyTapId===clicked.id && (now-lastEnemyTapTs)<=350){ target=clicked; autoChase=true; pathQueue=[]; }
@@ -383,78 +362,50 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     return false;
   }
 
-  /* Combat + bleed */
+  /* Combat minimal */
   const dmgTexts=[];
   function addDmgText(tx,ty,txt,color){ const px=tx*TILE+TILE/2, py=ty*TILE+TILE/2-28; dmgTexts.push({x:px,y:py,txt,color,ttl:700,vy:-0.04}); }
   function updateDmgTexts(dt){ for(let i=dmgTexts.length-1;i>=0;i--){ const d=dmgTexts[i]; d.ttl-=dt; d.y+=d.vy*dt; if(d.ttl<=0) dmgTexts.splice(i,1); } }
   function drawDmgTexts(){ for(let i=0;i<dmgTexts.length;i++){ const d=dmgTexts[i]; const a=Math.max(0,Math.min(1,d.ttl/700)); ctx.save(); ctx.globalAlpha=a; ctx.fillStyle=d.color; ctx.font='bold 16px system-ui'; ctx.textAlign='center'; ctx.fillText(d.txt,d.x,d.y); ctx.restore(); } }
-
   function rollCrit(ch){ return Math.random() < ch; }
   function attackEnemy(t){
     const now=performance.now(); player.lastAtk=now;
     const base=rndInt(player.atkMin,player.atkMax);
-    const crit = rollCrit(getCritChance());
-    const mult = crit ? (1 + (player.stats.critDmg||0)) : 1;
-    const dmg = Math.max(0, Math.floor(base * mult));
-    t.hp = Math.max(0, t.hp - dmg);
-    addDmgText(t.x,t.y,(crit?'CRIT ':'-')+dmg, crit ? '#facc15' : '#ffd166');
+    const crit=rollCrit(getCritChance()); const mult=crit?(1+(player.stats.critDmg||0)):1;
+    const dmg=Math.max(0, Math.floor(base*mult));
+    t.hp=Math.max(0, t.hp-dmg);
+    addDmgText(t.x,t.y,(crit?'CRIT ':'-')+dmg, crit?'#facc15':'#ffd166');
     if(t.hp===0){
-      if(target===t){ target=null; autoChase=false; hideTargetFrame(); }
+      if(target===t){ target=null; autoChase=false; }
       logSys('Nemico sconfitto. +25 XP');
       enemies.splice(enemies.indexOf(t),1);
       gainXP(25);
-      // respawn semplice dopo 1s altrove se sei in Main
       setTimeout(()=>{ if(WORLD.current==='main'){ const s=randEmpty(); enemies.push(makeArcher(s.x,s.y)); } }, 1000);
     }
-    draw(); updateTargetFrame();
+    draw();
   }
-
   function applyDamageReduction(amount, source){
-    // Difesa flat
-    let dmg = Math.max(0, amount - (player.stats.defense|0));
-    // Mitigazione %
-    const miti = clamp(player.stats.mitigation||0, 0, 0.60);
-    dmg = Math.floor(dmg * (1 - miti));
-    // Proiettili %
-    if(source==='projectile'){
-      const pr = clamp(player.stats.projRes||0, 0, 0.60);
-      dmg = Math.floor(dmg * (1 - pr));
-    }
-    return Math.max(0, dmg|0);
+    let dmg=Math.max(0, amount-(player.stats.defense|0));
+    const miti=clamp(player.stats.mitigation||0,0,0.60); dmg=Math.floor(dmg*(1-miti));
+    if(source==='projectile'){ const pr=clamp(player.stats.projRes||0,0,0.60); dmg=Math.floor(dmg*(1-pr)); }
+    return Math.max(0,dmg|0);
   }
-  function takePlayerDamage(amount, label, source){
-    const dmg = applyDamageReduction(amount, source);
-    player.hp = Math.max(0, player.hp - dmg);
-    addDmgText(player.x, player.y, label + dmg, '#ff6b6b');
+  function takePlayerDamage(amount,label,source){
+    const dmg=applyDamageReduction(amount,source);
+    player.hp=Math.max(0, player.hp-dmg); addDmgText(player.x,player.y,label+dmg,'#ff6b6b');
     if(player.hp===0) gameOver();
   }
 
-  function applyBleed(ticks, tickDmgBase, periodMs){
-    const res = clamp(player.stats.bleedRes||0, 0, 0.70);
-    const tickDmg = Math.max(1, Math.floor(tickDmgBase * (1 - res)));
-    player.status.bleed = { ticksLeft:ticks, nextTs:performance.now()+periodMs, period:periodMs, tick:tickDmg };
-    logDmg('Sanguinamento ('+ticks+'× '+tickDmg+').');
-  }
-  function updateBleed(now){
-    const b=player.status.bleed; if(!b) return;
-    if(now>=b.nextTs && b.ticksLeft>0){
-      b.ticksLeft--; b.nextTs=now+b.period;
-      takePlayerDamage(b.tick, '-','bleed');
-      if(b.ticksLeft<=0) player.status.bleed=null;
-    }
-  }
-
   function gameOver(){
-    dead=true; autoChase=false; pathQueue=[]; target=null; hideTargetFrame();
+    dead=true; autoChase=false; pathQueue=[]; target=null;
     cv.style.filter='grayscale(1)'; cv.style.opacity='0.6';
     deathOverlay.classList.remove('hidden');
   }
   deathRespawn.onclick=()=>{
-    // teleporta allo spawn, cura full
     const res=buildMap('spawn'); map=res.map; applyTheme(res.theme); WORLD.current='spawn';
-    const exit=findSafeExit('spawn', COLS-2, (ROWS>>1));
-    player.x=exit.x; player.y=exit.y; player.vx=exit.x; player.vy=exit.y;
-    player.hp=player.maxHp; player.status.bleed=null;
+    const exit=findSafeExit('spawn', COLS-2, (ROWS>>1), /*minGap*/1);
+    setPlayerPos(exit.x, exit.y);
+    player.hp=player.maxHp;
     enemies.length=0; projectiles.length=0; pathQueue=[];
     dead=false; deathOverlay.classList.add('hidden'); cv.style.filter=''; cv.style.opacity='';
     teleportGuardUntil=performance.now()+600;
@@ -463,50 +414,72 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   };
   deathReset.onclick=()=>location.reload();
 
-  /* Enemy AI + projectiles */
+  /* LoS */
   function hasLoS(ax,ay,bx,by){
     if(ax===bx){ const step=(ay<by)?1:-1; for(let y=ay+step; y!==by; y+=step){ if(map[y][ax]===1) return false; } return true; }
     if(ay===by){ const st=(ax<bx)?1:-1; for(let x=ax+st; x!==bx; x+=st){ if(map[ay][x]===1) return false; } return true; }
     return false;
   }
 
-  /* Portals: safe exit + guards */
-  let teleportGuardUntil=0;
-  let entryAggroSilenceUntil=0;
-  function findSafeExit(worldName, px, py){
+  /* Portals: safe exit + guards (robusto) */
+  let teleportGuardUntil=0;              // blocca il retrigger per un po'
+  let entryAggroSilenceUntil=0;          // i mob non aggrano subito
+  let mustMoveOffExit=false;             // finché non ti sposti dalla tile d'uscita, ignora portali
+  let lastExit={x:-1,y:-1};              // ricorda l’uscita corrente
+
+  function setPlayerPos(x,y){ player.x=x; player.y=y; player.vx=x; player.vy=y; }
+
+  function findSafeExit(worldName, px, py, minGapFromPortal){
+    const gap = (minGapFromPortal==null)?1:minGapFromPortal;
     const candidates = [
       [ 1, 0],[-1, 0],[ 0, 1],[ 0,-1],
       [ 1, 1],[-1, 1],[ 1,-1],[-1,-1],
-      [ 2, 0],[-2, 0],[ 0, 2],[ 0,-2]
+      [ 2, 0],[-2, 0],[ 0, 2],[ 0,-2],
+      [ 3, 0],[-3, 0],[ 0, 3],[ 0,-3]
     ];
-    for (let i=0;i<candidates.length;i++){
-      const nx = clamp(px + candidates[i][0], 0, COLS-1);
-      const ny = clamp(py + candidates[i][1], 0, ROWS-1);
+    // prova vicini NON-portale e non adiacenti al portale (gap)
+    function isNearPortal(wx,wy){ const list=WORLD.portals[worldName]||[]; for(let i=0;i<list.length;i++){ const p=list[i]; if(Math.abs(wx-p.x)<=gap && Math.abs(wy-p.y)<=gap) return true; } return false; }
+    for(const d of candidates){
+      const nx=clamp(px+d[0],0,COLS-1), ny=clamp(py+d[1],0,ROWS-1);
       if(!walkable(nx,ny)) continue;
-      if(isPortalTile(worldName, nx, ny)) continue;
+      if(isPortalTile(worldName,nx,ny)) continue;
+      if(isNearPortal(nx,ny)) continue; // evita tile attigue al portale: niente ping-pong
       if(!tileFree(nx,ny)) continue;
-      return {x:nx, y:ny};
+      return {x:nx,y:ny};
     }
-    return {x:px, y:py};
+    // fallback: stessa tile target ma NON portale → sposta di 1 in X
+    let fx=clamp(px+1,0,COLS-1), fy=py;
+    if(!walkable(fx,fy) || isPortalTile(worldName,fx,fy)) fx=clamp(px-1,0,COLS-1);
+    return {x:fx,y:fy};
   }
+
   function checkPortalEnter(){
     const now=performance.now();
     if(now<teleportGuardUntil) return false;
+    // finché sei sull'ultima tile di uscita, ignora i portali per evitare rimbalzi
+    if(mustMoveOffExit && player.x===lastExit.x && player.y===lastExit.y) return false;
+
     const list=WORLD.portals[WORLD.current]||[];
     for(let i=0;i<list.length;i++){
       const p=list[i];
       if(p.x===player.x && p.y===player.y){
-        // switch world
-        const res=buildMap(p.to); map=res.map; applyTheme(res.theme); WORLD.current=p.to;
-        // safe exit (NON sul portale)
-        const exit = findSafeExit(p.to, p.tx, p.ty);
-        player.x=exit.x; player.y=exit.y; player.vx=exit.x; player.vy=exit.y; pathQueue.length=0;
-        // spawn mobs se Main
-        if(WORLD.current==='main'){ spawnMain(); }
-        else { enemies.length=0; projectiles.length=0; }
-        // guards
+        // teletrasporto
+        const next = buildMap(p.to); map=next.map; applyTheme(next.theme); WORLD.current=p.to;
+        // se vai in main, prima spawna i mob in zone lontane
+        if(WORLD.current==='main'){ spawnMain(); } else { enemies.length=0; projectiles.length=0; }
+        // piazza su uscita sicura NON-portale e non adiacente al portale
+        const exit = findSafeExit(p.to, p.tx, p.ty, /*minGapFromPortal*/1);
+        setPlayerPos(exit.x, exit.y);
+        pathQueue.length=0;
+
+        // attiva guardie anti-loop + aggro delay
         teleportGuardUntil = performance.now()+600;
         entryAggroSilenceUntil = performance.now()+900;
+
+        // richiedi di muoversi via dalla tile di uscita prima di poter riusare portali
+        mustMoveOffExit = true;
+        lastExit = {x:exit.x, y:exit.y};
+
         logSys('Teletrasporto: '+(WORLD.current==='main'?'Main':'Spawn'));
         draw();
         return true;
@@ -518,15 +491,12 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   /* Render */
   function draw(){
     ctx.clearRect(0,0,cv.width,cv.height);
-    // tiles
     for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
       ctx.fillStyle=(map[y][x]===1)?getVar('--block'):(((x+y)%2===0)?getVar('--tileA'):getVar('--tileB'));
       ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
     }
-    // portals
     drawPortals();
 
-    // enemies
     for(let i=0;i<enemies.length;i++){
       const e=enemies[i]; const ex=(e.vx!=null?e.vx:e.x), ey=(e.vy!=null?e.vy:e.y);
       drawActor(ex,ey,getVar('--enemy'));
@@ -534,28 +504,23 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       if(target===e) drawTargetRing(ex,ey);
     }
 
-    // player
     const pxv=(player.vx!=null?player.vx:player.x), pyv=(player.vy!=null?player.vy:player.y);
     drawActor(pxv,pyv,getVar('--player')); drawHpBar(pxv,pyv,player.hp,player.maxHp,false,false);
 
-    // projectiles
     for(let p=0;p<projectiles.length;p++){
       const pr=projectiles[p]; const ptx=(pr.vx!=null?pr.vx:pr.x), pty=(pr.vy!=null?pr.vy:pr.y);
       const x=ptx*TILE+TILE/2, y=pty*TILE+TILE/2; ctx.fillStyle='#f87171'; ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
     }
 
-    // dmg texts
     drawDmgTexts();
-
-    // HUD overlay
     drawHud();
 
-    // status (mostro XP progress)
-    const need = (player.lvl<MAX_LVL) ? xpNeeded(player.lvl) : 1;
-    const ratio = (player.lvl<MAX_LVL) ? Math.min(1, player.exp/need) : 1;
-    statusEl.textContent=`build: ${BUILD} | LV ${player.lvl} ${player.lvl<MAX_LVL?('('+Math.floor(ratio*100)+'%)'):''} | HP ${player.hp}/${player.maxHp} | ATK ${player.atkMin}–${player.atkMax} | Crit ${(getCritChance()*100|0)}% | atkCD ${getAtkCd()}ms`;
+    const need=(player.lvl<MAX_LVL)?xpNeeded(player.lvl):1;
+    const ratio=(player.lvl<MAX_LVL)?Math.min(1,player.exp/need):1;
+    const guardLeft=Math.max(0, teleportGuardUntil - performance.now())|0;
+    const aggroSilLeft=Math.max(0, entryAggroSilenceUntil - performance.now())|0;
+    statusEl.textContent=`build:${BUILD} | LV ${player.lvl} ${player.lvl<MAX_LVL?('('+Math.floor(ratio*100)+'%)'):''} | HP ${player.hp}/${player.maxHp} | ATK ${player.atkMin}–${player.atkMax} | AggroSil ${aggroSilLeft}ms | TPGuard ${guardLeft}ms`;
   }
-
   function drawPortals(){
     const list=WORLD.portals[WORLD.current]||[];
     ctx.save();
@@ -580,64 +545,70 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     ctx.strokeStyle=isTarget?'#f87171':'#0008'; ctx.lineWidth=isTarget?2:1; ctx.strokeRect(px,py,w,h); ctx.lineWidth=1;
   }
   function drawTargetRing(tx,ty){ const x=tx*TILE+TILE/2, y=ty*TILE+TILE/2; ctx.save(); ctx.strokeStyle='#ef4444'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(x,y,28,0,Math.PI*2); ctx.stroke(); ctx.restore(); }
-  function roundRectPath(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
   function drawHudBtn(r, glyph, enabled){ ctx.save(); ctx.globalAlpha=enabled?1:0.55; ctx.fillStyle='rgba(15,23,42,.85)'; ctx.strokeStyle='#1f2a44'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(r.x+12,r.y); ctx.arcTo(r.x+r.w,r.y,r.x+r.w,r.y+r.h,12); ctx.arcTo(r.x+r.w,r.y+r.h,r.x,r.y+r.h,12); ctx.arcTo(r.x,r.y+r.h,r.x,r.y,12); ctx.arcTo(r.x,r.y,r.x+r.w,r.y,12); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.font='28px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#e5e7eb'; ctx.fillText(glyph, r.x + r.w/2, r.y + r.h/2); ctx.restore(); }
   function drawHud(){
     drawHudBtn(HUD.atk, '🗡️', (performance.now()-player.lastAtk)>=getAtkCd());
     drawHudBtn(HUD.pot, '🍵', player.pots>0);
     drawHudBtn(HUD.char, '👤', true);
     if(destMarker && destMarker.ttl>0){
-      const a = Math.min(1, destMarker.ttl/400);
-      ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle='#93c5fd'; ctx.lineWidth=2;
+      const a=Math.min(1, destMarker.ttl/400);
+      ctx.save(); ctx.globalAlpha=a; ctx.strokeStyle='#93c5fd'; ctx.lineWidth=2;
       const cx=destMarker.x*TILE+TILE/2, cy=destMarker.y*TILE+TILE/2;
       ctx.beginPath(); ctx.arc(cx,cy,20,0,Math.PI*2); ctx.stroke(); ctx.restore();
     }
   }
 
-  /* Target frame (placeholder: tutto è in canvas) */
+  /* Target frame placeholder */
   function updateTargetFrame(){}
-  function hideTargetFrame(){}
+
+  /* Guards movement helper */
+  function movedOffExitTile(){ return !(player.x===lastExit.x && player.y===lastExit.y); }
 
   /* Loop */
   let lastStepTs=performance.now();
   function step(){
     try{
       const now=performance.now();
-      const dt = Math.min(200, now-lastStepTs)|0; lastStepTs=now;
+      const dt=Math.min(200, now-lastStepTs)|0; lastStepTs=now;
+
+      // se ti sei mosso via dalla tile di uscita, riabilita i portali
+      if(mustMoveOffExit && movedOffExitTile()) mustMoveOffExit=false;
 
       // Player path follow
       if(!dead && pathQueue.length){
-        const next = pathQueue[0];
+        const next=pathQueue[0];
         let blocked=!walkable(next.x,next.y);
         for(let i=0;i<enemies.length;i++){ const e=enemies[i]; if(e.x===next.x&&e.y===next.y){ blocked=true; break; } }
         if(blocked){ pathQueue.length=0; }
         else{
-          const fx=player.x, fy=player.y; player.x=next.x; player.y=next.y; startTween(player,fx,fy,player.x,player.y,now);
+          const fx=player.x, fy=player.y; setPlayerPos(next.x,next.y); startTween(player,fx,fy,player.x,player.y,now);
           pathQueue.shift();
         }
       }
 
-      // Portali (safe + guard)
+      // Portali (con guard)
       checkPortalEnter();
 
-      // Enemy AI
+      // Enemy AI con aggro “vicino + LoS”
       for(let j=0;j<enemies.length;j++){
         const e=enemies[j];
-        // aggro (rispettando il silenzio post-teleport)
-        if(now >= entryAggroSilenceUntil){
-          const distC=chebyshev(e,player);
-          if(!e.aggro && distC<=e.aggroRange){ e.aggro=true; e.lastSeenTs=now; }
-        }
+        e.moveTick=(e.moveTick+1)%e.moveEvery;
+        const canMove=(e.moveTick===0);
+
         const distC=chebyshev(e,player);
+        // aggro solo se vicino e con LoS (o molto vicino)
+        if(!e.aggro && now>=entryAggroSilenceUntil){
+          const canAggro = (distC<=e.aggroRange) && (hasLoS(e.x,e.y,player.x,player.y) || distC<=2);
+          if(canAggro){ e.aggro=true; e.lastSeenTs=now; }
+        }
+
         const tooFar = chebyshev({x:e.spawnX,y:e.spawnY}, player) > e.leashRange || distC > e.leashRange;
         if(e.aggro){
           if(hasLoS(e.x,e.y,player.x,player.y) || distC<=1) e.lastSeenTs=now;
           if(tooFar || (now - e.lastSeenTs) > e.loseAggroMs){
-            e.aggro=false; e.path = bfs(e.x,e.y,e.spawnX,e.spawnY)||[]; e.mode='return';
+            e.aggro=false; e.path = bfs(e.x,e.y,e.spawnX,e.spawnY)||[];
           }
         }
-        e.moveTick=(e.moveTick+1)%e.moveEvery;
-        const canMove=(e.moveTick===0);
 
         if(e.aggro && now>=entryAggroSilenceUntil){
           const distM=Math.abs(e.x-player.x)+Math.abs(e.y-player.y);
@@ -645,14 +616,12 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
           if(inRange){
             if(now-e.lastShot>=e.atkCd){
               e.lastShot=now;
-              // windup breve, poi scocca
               setTimeout(()=>{
                 const dx=(player.x===e.x)?0:(player.x>e.x?1:-1);
                 const dy=(player.y===e.y)?0:(player.y>e.y?1:-1);
                 if(dx||dy) projectiles.push({x:e.x,y:e.y,dx,dy,spdTick:0,dmg:rndInt(6,10), vx:e.x, vy:e.y, vStart:0,vEnd:0, bleedChance:0.3});
               }, e.windupMs);
             }
-            // se troppo vicino, prova passo indietro
             if(distM<e.rangeMin && canMove){
               const backX=e.x + (player.x<e.x?1:(player.x>e.x?-1:0));
               const backY=e.y + (player.y<e.y?1:(player.y>e.y?-1:0));
@@ -660,17 +629,15 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
                 const fx=e.x, fy=e.y; e.x=backX; e.y=backY; startTween(e,fx,fy,e.x,e.y,now);
               }
             }
-          } else {
-            if(canMove){
-              if(chebyshev(e,player)>1 || !hasLoS(e.x,e.y,player.x,player.y)){
-                e.path = bfsToAdjacencySmart(e.x,e.y,player.x,player.y,'ranged') || e.path || [];
-              }
-              tryStepAlongPath(e, now);
+          } else if(canMove){
+            if(chebyshev(e,player)>1 || !hasLoS(e.x,e.y,player.x,player.y)){
+              e.path = bfsToAdjacencySmart(e.x,e.y,player.x,player.y,'ranged') || e.path || [];
             }
+            tryStepAlongPath(e, now);
           }
-        } else {
+        } else if(canMove){
           // rientro
-          if((e.x!==e.spawnX || e.y!==e.spawnY) && canMove){
+          if((e.x!==e.spawnX || e.y!==e.spawnY)){
             if(!e.path || !e.path.length) e.path=bfs(e.x,e.y,e.spawnX,e.spawnY)||[];
             tryStepAlongPath(e, now);
           }
@@ -686,17 +653,16 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         if(nx===player.x && ny===player.y){
           const base=rndInt(pr.dmg-1, pr.dmg+1);
           takePlayerDamage(base, '-', 'projectile');
-          if(Math.random() < (pr.bleedChance||0)){ applyBleed(4, 4, 700); }
+          if(Math.random() < (pr.bleedChance||0)){ /* bleed placeholder */ }
           projectiles.splice(pi,1); continue;
         }
-        startTween(pr, pr.x, pr.y, nx, ny, now);
-        pr.x=nx; pr.y=ny;
+        startTween(pr, pr.x, pr.y, nx, ny, now); pr.x=nx; pr.y=ny;
       }
 
       // Auto-chase & auto-attack
       if(autoChase && target && !dead){
         const stillThere = enemies.indexOf(target)!==-1;
-        if(!stillThere){ autoChase=false; target=null; hideTargetFrame(); }
+        if(!stillThere){ autoChase=false; target=null; }
         if(target){
           if(chebyshev(player,target)!==1 && pathQueue.length===0){
             const pAdj=bfsToAdjacencySmart(player.x,player.y,target.x,target.y,target.type);
@@ -708,12 +674,9 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         }
       }
 
-      // Bleed tick + dmg texts + dest marker
-      updateBleed(now);
       updateDmgTexts(dt);
-      if(destMarker){ destMarker.ttl -= dt; if(destMarker.ttl<=0) destMarker=null; }
+      if(destMarker){ destMarker.ttl-=dt; if(destMarker.ttl<=0) destMarker=null; }
 
-      // Render
       updateTweens();
       draw();
 
@@ -732,7 +695,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function pct(v){ return Math.round((v||0)*100); }
   function renderCharPanel(){
     if(charWin.classList.contains('hidden')) return;
-    const need = (player.lvl<MAX_LVL) ? xpNeeded(player.lvl) : 1;
+    const need=(player.lvl<MAX_LVL)?xpNeeded(player.lvl):1;
     const basics=[
       ['Livello','LV '+player.lvl],
       ['XP',''+player.exp+' / '+(player.lvl<MAX_LVL?need:'—')],
@@ -750,8 +713,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       ['Vel. Attacco', pct(clamp(player.stats.atkSpeed||0,0,0.50))+'%'],
       ['Luck (Crit +)', pct(player.stats.luck||0)+'%']
     ];
-    charBasics.innerHTML = basics.map(kv=>`<div class="stat"><span class="k">${kv[0]}</span><span class="v">${kv[1]}</span></div>`).join('');
-    charStats.innerHTML  = stats.map(kv=>`<div class="stat"><span class="k">${kv[0]}</span><span class="v">${kv[1]}</span></div>`).join('');
+    charBasics.innerHTML=basics.map(kv=>`<div class="stat"><span class="k">${kv[0]}</span><span class="v">${kv[1]}</span></div>`).join('');
+    charStats.innerHTML =stats.map(kv=>`<div class="stat"><span class="k">${kv[0]}</span><span class="v">${kv[1]}</span></div>`).join('');
   }
   function renderCharIfOpen(){ renderCharPanel(); }
 
@@ -770,7 +733,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       if(d && d.player){ for(const k in d.player){ if(d.player.hasOwnProperty(k)) player[k]=d.player[k]; } }
       enemies.length=0; if(d && Array.isArray(d.enemies)){ for(let i=0;i<d.enemies.length;i++) enemies.push(d.enemies[i]); }
       if(d && d.world){ WORLD.current=d.world; applyTheme(WORLD.current==='main'?THEMES.main:THEMES.spawn); }
-      player.vx=player.x; player.vy=player.y; pathQueue.length=0; dead=false; deathOverlay.classList.add('hidden'); cv.style.filter=''; cv.style.opacity='';
+      setPlayerPos(player.x,player.y); pathQueue.length=0; dead=false; deathOverlay.classList.add('hidden'); cv.style.filter=''; cv.style.opacity='';
       recomputeStats(false); draw(); renderCharIfOpen(); toast('Caricato');
     }catch(e){ panic('load', e); }
   };
