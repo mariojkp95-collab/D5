@@ -3,12 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Drakoria — Portals+Aggro Fix</title>
+<title>Drakoria — Maestro + Equip Drop</title>
 <style>
 :root{
   --bg:#0b1224; --panel:#0f172a; --stroke:#1f2a44; --text:#e5e7eb; --muted:#9ca3af;
   --tileA:#0e2a1e; --tileB:#123022; --block:#15223b;
   --player:#3b82f6; --enemy:#ef4444; --shadow:#0006; --hpBack:#1f2937;
+  --rare:#60a5fa; --epic:#a78bfa; --legend:#f59e0b;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto}
@@ -42,7 +43,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 .btn:disabled{background:#1f2a44;color:#9aa0ad;cursor:not-allowed}
 
 /* Character (stats) */
-.char{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:520px; max-width:95vw;
+.char{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:560px; max-width:95vw;
      background:#0f172a; border:1px solid #1f2a44; border-radius:12px; box-shadow:0 18px 44px rgba(0,0,0,.45); z-index:46}
 .char-h{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #1f2a44;font-weight:700}
 .char-x{width:32px;height:26px;border-radius:6px;border:1px solid #31406e;background:#26325a;color:#fff;cursor:pointer}
@@ -52,14 +53,31 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 .stat .k{color:#93c5fd; font-weight:700}
 .stat .v{font-weight:700}
 .hidden{display:none}
+.subtle{color:#9ca3af;font-size:12px}
 
-/* Toast */
+/* Maestro panel */
+.npc{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:640px; max-width:96vw;
+  background:#0f172a; border:1px solid #1f2a44; border-radius:12px; box-shadow:0 18px 44px rgba(0,0,0,.45); z-index:47}
+.npc-h{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #1f2a44;font-weight:800}
+.npc-x{width:32px;height:26px;border-radius:6px;border:1px solid #31406e;background:#26325a;color:#fff;cursor:pointer}
+.npc-b{padding:12px}
+.npc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.npc-card{border:1px solid #2a355c;border-radius:10px;background:#0b1224;padding:10px}
+.npc-card h4{margin:0 0 6px 0}
+.npc-li{margin:0 0 8px 0}
+.npc-li b{color:#e5e7eb}
+
+/* Toast + Drop card */
 .toast{position:fixed; left:50%; bottom:84px; transform:translateX(-50%); background:rgba(15,23,42,.9); border:1px solid #1f2a44; color:#e5e7eb; padding:6px 10px; border-radius:10px; z-index:55; display:none}
+.dropcard{position:fixed; left:50%; bottom:140px; transform:translateX(-50%); background:#0b1224; border:1px solid #2a355c; color:#e5e7eb; padding:10px 12px; border-radius:12px; z-index:56; display:none; min-width:260px}
+.dropcard .r{font-weight:800}
+.dropcard .u{color:var(--rare)}
+.dropcard .ra{color:var(--epic)}
 </style>
 </head>
 <body>
 <header>
-  <div><strong>Drakoria</strong> <span class="muted">portals+aggro fix</span></div>
+  <div><strong>Drakoria</strong> <span class="muted">maestro + equip drop</span></div>
   <div>
     <button id="btnChar" class="btn">Personaggio</button>
     <button id="btnSave" class="btn">Save</button>
@@ -72,7 +90,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   <canvas id="game" width="1344" height="768" aria-label="Gioco"></canvas>
   <p class="help">
     Tap per muoverti • tap su un nemico per target • doppio tap/press prolungato per auto-inseguire • SPAZIO/🗡️ attacca.  
-    Portale viola tra Spawn ↔ Main. Pannello <b>Personaggio</b> per statistiche & XP.
+    Portale viola tra Spawn ↔ Main. Parla con il <b>Maestro</b> nello Spawn per info sulle Stat.
   </p>
   <div id="status"></div>
 </main>
@@ -80,6 +98,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 <section class="log" id="logPanel"><div class="h"><span>Log</span></div><div id="logBody" class="b"></div></section>
 <div id="errBox" class="err"></div>
 <div id="toast" class="toast"></div>
+<div id="dropCard" class="dropcard"></div>
 
 <!-- Game Over -->
 <div id="deathOverlay" class="death hidden" role="dialog" aria-modal="true" aria-label="Game Over">
@@ -93,19 +112,47 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   </div>
 </div>
 
-<!-- Character (stats) -->
+<!-- Character (stats quick) -->
 <section id="charWin" class="char hidden" role="dialog" aria-modal="true" aria-label="Personaggio">
   <div class="char-h"><span>Personaggio</span><button id="charClose" class="char-x">×</button></div>
   <div class="char-b">
+    <div id="eqInfo" class="stat-grid" style="margin-bottom:10px"></div>
     <div id="charBasics" class="stat-grid" style="margin-bottom:10px"></div>
     <div id="charStats" class="stat-grid"></div>
   </div>
 </section>
 
+<!-- Maestro (stat tutorial) -->
+<section id="npcWin" class="npc hidden" role="dialog" aria-modal="true" aria-label="Maestro">
+  <div class="npc-h"><span>Maestro</span><button id="npcClose" class="npc-x">×</button></div>
+  <div class="npc-b">
+    <div class="npc-grid">
+      <div class="npc-card">
+        <h4>Offensive</h4>
+        <p class="npc-li"><b>ATK Min/Max</b> — da arma + bonus.</p>
+        <p class="npc-li"><b>Velocità Attacco %</b> — riduce il CD: <br><span class="subtle">atkCdEff = max(180ms, base * (1 - atkSpeed))</span></p>
+        <p class="npc-li"><b>Crit Chance %</b> — base + Luck.</p>
+        <p class="npc-li"><b>Crit Damage %</b> — danno critico: <br><span class="subtle">dmgCrit = base * (1 + critDmg)</span></p>
+        <p class="npc-li"><b>Luck %</b> — aumenta Crit Chance.</p>
+      </div>
+      <div class="npc-card">
+        <h4>Difensive</h4>
+        <p class="npc-li"><b>HP Max</b> — da armatura + bonus.</p>
+        <p class="npc-li"><b>Difesa</b> — sottrae danno: <br><span class="subtle">dmg = max(0, dmg - defense)</span></p>
+        <p class="npc-li"><b>Mitigazione %</b> — riduce il resto: <br><span class="subtle">dmg = dmg * (1 - mitigation)</span> (cap 60%)</p>
+        <p class="npc-li"><b>Res. Proiettili %</b> — solo colpi arcieri: <br><span class="subtle">dopo miti</span></p>
+        <p class="npc-li"><b>Res. Bleed %</b> — riduce danni/durata sanguinamento (cap 70%).</p>
+      </div>
+    </div>
+    <hr style="border:none;border-top:1px solid #1f2a44;margin:12px 0">
+    <div id="npcValues" class="npc-card"></div>
+  </div>
+</section>
+
 <script>
 (function(){
-  const BUILD='PORTALS-AGGRO-FIX';
-  const SAVE_KEY='save_portals_aggro_fix';
+  const BUILD='MAESTRO+EQUIP';
+  const SAVE_KEY='save_maestro_equip';
   const cv=document.getElementById('game'); const ctx=cv.getContext('2d');
 
   /* UI */
@@ -113,17 +160,22 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   const errBox=document.getElementById('errBox');
   const logBody=document.getElementById('logBody');
   const toastEl=document.getElementById('toast');
+  const dropCardEl=document.getElementById('dropCard');
+
   const deathOverlay=document.getElementById('deathOverlay');
   const deathRespawn=document.getElementById('deathRespawn');
   const deathReset=document.getElementById('deathReset');
+
   const btnChar=document.getElementById('btnChar');
   const charWin=document.getElementById('charWin');
   const charClose=document.getElementById('charClose');
+  const eqInfo=document.getElementById('eqInfo');
   const charBasics=document.getElementById('charBasics');
   const charStats=document.getElementById('charStats');
-  const btnSave=document.getElementById('btnSave');
-  const btnLoad=document.getElementById('btnLoad');
-  const btnReset=document.getElementById('btnReset');
+
+  const npcWin=document.getElementById('npcWin');
+  const npcClose=document.getElementById('npcClose');
+  const npcValues=document.getElementById('npcValues');
 
   function panic(where,e){
     errBox.style.display='block';
@@ -134,7 +186,13 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     toastEl.textContent=msg;
     toastEl.style.display='block';
     clearTimeout(toastEl.__t);
-    toastEl.__t=setTimeout(()=>toastEl.style.display='none',1100);
+    toastEl.__t=setTimeout(()=>toastEl.style.display='none',1200);
+  }
+  function showDropCard(html, ttl){
+    dropCardEl.innerHTML=html;
+    dropCardEl.style.display='block';
+    clearTimeout(dropCardEl.__t);
+    dropCardEl.__t=setTimeout(()=>dropCardEl.style.display='none', ttl||1600);
   }
   function logLine(msg,cls){ const t=new Date(); const hh=String(t.getHours()).padStart(2,'0'), mm=String(t.getMinutes()).padStart(2,'0'), ss=String(t.getSeconds()).padStart(2,'0'); logBody.innerHTML+=`<div class="line ${cls||''}">[${hh}:${mm}:${ss}] ${escapeHtml(msg)}</div>`; logBody.scrollTop=logBody.scrollHeight; }
   function logDmg(m){ logLine(m,'dmg'); }
@@ -206,7 +264,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   }
   function updateTweens(){ const now=performance.now(); tweenUpdate(player,now); for(let i=0;i<enemies.length;i++) tweenUpdate(enemies[i],now); for(let j=0;j<projectiles.length;j++) tweenUpdate(projectiles[j],now); }
 
-  /* Player + Stats (ridotto) */
+  /* Player + Stats + Equip */
   const player={
     x:12,y:4,
     baseMaxHp:100, baseAtkMin:6, baseAtkMax:12,
@@ -216,6 +274,12 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     stats:{ atkSpeed:0.00, critDmg:0.50, luck:0.00, defense:0, mitigation:0.00, projRes:0.00, bleedRes:0.00 },
     status:{ bleed:null }
   };
+  // equip leggero
+  let equipped={
+    weapon:{ name:'Coltellino', slot:'weapon', rarity:'common', icon:'🗡️', atkBonus:0, affix:{} },
+    armor: { name:'Tunica', slot:'armor', rarity:'common', icon:'🛡️', hpBonus:0, affix:{} }
+  };
+
   const MAX_LVL=99;
   function xpNeeded(l){ return Math.floor(50 * Math.pow(l, 1.5)); }
   function gainXP(n){
@@ -224,7 +288,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     while(player.lvl<MAX_LVL && player.exp>=xpNeeded(player.lvl)){
       player.exp-=xpNeeded(player.lvl); levelUp();
     }
-    renderCharIfOpen();
+    renderCharIfOpen(); renderNpcValues();
   }
   function levelUp(){
     player.lvl=Math.min(MAX_LVL, player.lvl+1);
@@ -242,17 +306,29 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     logSys('Level up → LV '+player.lvl);
     toast('LV '+player.lvl);
   }
-  function getCritChance(){ return clamp(player.baseCrit + (player.stats.luck||0), 0, 0.90); }
-  function getAtkCd(){ const eff=player.atkCd*(1-clamp(player.stats.atkSpeed||0,0,0.50)); return Math.max(180, Math.floor(eff)); }
+
+  // effettivi = base + affissi equip
+  function effectiveStat(name){
+    let v = player.stats[name]||0;
+    if(equipped.weapon && equipped.weapon.affix && equipped.weapon.affix[name]) v += equipped.weapon.affix[name];
+    if(equipped.armor  && equipped.armor .affix && equipped.armor .affix[name]) v += equipped.armor .affix[name];
+    return v;
+  }
+  function getCritChance(){ return clamp(player.baseCrit + effectiveStat('luck'), 0, 0.90); }
+  function getCritMult(){ return 1 + effectiveStat('critDmg'); }
+  function getAtkCd(){ const eff=player.atkCd*(1-clamp(effectiveStat('atkSpeed'),0,0.50)); return Math.max(180, Math.floor(eff)); }
+
   function recomputeStats(heal){
-    player.maxHp=Math.round(player.baseMaxHp);
-    player.atkMin=Math.round(player.baseAtkMin);
-    player.atkMax=Math.round(player.baseAtkMax);
+    let atkB = equipped.weapon?.atkBonus|0;
+    let hpB  = equipped.armor ?.hpBonus |0;
+    player.maxHp=Math.round(player.baseMaxHp + hpB);
+    player.atkMin=Math.round(player.baseAtkMin + atkB);
+    player.atkMax=Math.round(player.baseAtkMax + atkB);
     if(heal) player.hp=player.maxHp; if(player.hp>player.maxHp) player.hp=player.maxHp;
-    renderCharIfOpen();
+    renderCharIfOpen(); renderNpcValues();
   }
 
-  /* Enemies */
+  /* Enemies + projectiles */
   let enemies=[], projectiles=[];
   let _eid=1; function giveId(e){ e.id=_eid++; return e; }
   function makeArcher(x,y){
@@ -273,7 +349,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   }
   function spawnMain(){
     enemies.length=0;
-    // gruppi sul lato destro, lontani dal portale (che è a x=1)
     createPatrolGroup(5, COLS-5, 2, 2);
     createPatrolGroup(5, COLS-5, ROWS-3, 2);
   }
@@ -283,9 +358,24 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     } return randEmpty();
   }
 
+  /* NPC Maestro in spawn */
+  const NPCS=[];
+  function makeMaestro(x,y){
+    return { kind:'maestro', x, y, w:1, h:1, name:'Maestro', icon:'🧙‍♂️' };
+  }
+  function ensureSpawnNpcs(){
+    if(!NPCS.find(n=>n.kind==='maestro')){
+      // vicino al centro spawn lato sinistro
+      const mid=ROWS>>1;
+      const pos={x:Math.max(2, COLS-6), y:mid-3}; // un po' distante dal portale
+      NPCS.push(makeMaestro(pos.x,pos.y));
+    }
+  }
+
   /* Init spawn */
   (function initSpawn(){
     const res=buildMap('spawn'); map=res.map; applyTheme(res.theme); WORLD.current='spawn'; enemies.length=0; recomputeStats(true);
+    ensureSpawnNpcs();
   })();
 
   /* Input & HUD */
@@ -305,6 +395,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   btnChar.onclick=()=>{ charWin.classList.toggle('hidden'); renderCharPanel(); };
   charClose.onclick=()=>{ charWin.classList.add('hidden'); };
 
+  npcClose.onclick=()=>npcWin.classList.add('hidden');
+
   function canvasToTile(ev){
     const r=cv.getBoundingClientRect(), t=ev.touches&&ev.touches[0];
     const cx=t?t.clientX:ev.clientX, cy=t?t.clientY:ev.clientY;
@@ -317,6 +409,13 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function inRect(px,py,r){ return px>=r.x&&px<=r.x+r.w&&py>=r.y&&py<=r.y+r.h; }
   function getEnemyAtScreen(sx,sy){ for(let i=0;i<enemies.length;i++){ const ee=enemies[i]; if(inRect(sx,sy,enemyRect(ee))) return ee; } return null; }
 
+  function npcRect(n){ const x=n.x*TILE+TILE/2-16, y=n.y*TILE+TILE/2-24; return {x,y,w:32,h:40}; }
+  function getNpcAtScreen(sx,sy){
+    if(WORLD.current!=='spawn') return null;
+    for(let i=0;i<NPCS.length;i++){ const n=NPCS[i]; if(inRect(sx,sy,npcRect(n))) return n; }
+    return null;
+  }
+
   function onPointerDown(ev){
     if(dead) return;
     const m=canvasToTile(ev), pos={sx:m.sx,sy:m.sy};
@@ -328,10 +427,16 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     clearTimeout(holdTimer);
     const m=canvasToTile(ev), now=performance.now();
 
+    // HUD
     if(inRect(m.sx,m.sy,HUD.atk)){ tryAttackAdjacent(); return; }
     if(inRect(m.sx,m.sy,HUD.pot)){ usePotion(); return; }
     if(inRect(m.sx,m.sy,HUD.char)){ charWin.classList.toggle('hidden'); renderCharPanel(); return; }
 
+    // NPC Maestro
+    const npc=getNpcAtScreen(m.sx,m.sy);
+    if(npc){ openMaestro(); return; }
+
+    // Target
     const clicked=getEnemyAtScreen(m.sx,m.sy);
     if(clicked){
       if(lastEnemyTapId===clicked.id && (now-lastEnemyTapTs)<=350){ target=clicked; autoChase=true; pathQueue=[]; }
@@ -339,6 +444,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       lastEnemyTapId=clicked.id; lastEnemyTapTs=now; updateTargetFrame(); draw(); return;
     }
 
+    // Movimento
     autoChase=false;
     const p=bfs(player.x,player.y,m.tx,m.ty);
     if(p && p.length){ pathQueue=p; destMarker={x:m.tx,y:m.ty,ttl:1400}; }
@@ -362,16 +468,126 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     return false;
   }
 
-  /* Combat minimal */
+  /* Combat + drops */
   const dmgTexts=[];
   function addDmgText(tx,ty,txt,color){ const px=tx*TILE+TILE/2, py=ty*TILE+TILE/2-28; dmgTexts.push({x:px,y:py,txt,color,ttl:700,vy:-0.04}); }
   function updateDmgTexts(dt){ for(let i=dmgTexts.length-1;i>=0;i--){ const d=dmgTexts[i]; d.ttl-=dt; d.y+=d.vy*dt; if(d.ttl<=0) dmgTexts.splice(i,1); } }
   function drawDmgTexts(){ for(let i=0;i<dmgTexts.length;i++){ const d=dmgTexts[i]; const a=Math.max(0,Math.min(1,d.ttl/700)); ctx.save(); ctx.globalAlpha=a; ctx.fillStyle=d.color; ctx.font='bold 16px system-ui'; ctx.textAlign='center'; ctx.fillText(d.txt,d.x,d.y); ctx.restore(); } }
   function rollCrit(ch){ return Math.random() < ch; }
+
+  // generator affissi
+  function pick(arr){ return arr[(Math.random()*arr.length)|0]; }
+  function genWeapon(rarity){
+    const baseNames={ uncommon:['Pugnale Rozzo','Spada Leggera','Ascia di Rame'], rare:['Lama del Falco','Sciabola Runica'] };
+    const icon='🗡️';
+    const atkBonus = rarity==='rare' ? rndInt(3,5) : rndInt(1,3);
+    const aff={};
+    const pool=[ 'atkSpeed','critDmg','luck' ];
+    const nAff = rarity==='rare' ? 2 : 1;
+    for(let i=0;i<nAff;i++){
+      const k=pick(pool.filter(x=>!(x in aff)));
+      if(k==='atkSpeed') aff[k] = +(rarity==='rare' ? (Math.random()*0.05+0.03).toFixed(3) : (Math.random()*0.04+0.02).toFixed(3));
+      if(k==='critDmg') aff[k]   = +(rarity==='rare' ? (Math.random()*0.12+0.08).toFixed(3) : (Math.random()*0.08+0.05).toFixed(3));
+      if(k==='luck') aff[k]      = +(rarity==='rare' ? (Math.random()*0.06+0.03).toFixed(3) : (Math.random()*0.05+0.02).toFixed(3));
+    }
+    const name=pick(baseNames[rarity]);
+    return {slot:'weapon', icon, name, rarity, atkBonus, affix:aff};
+  }
+  function genArmor(rarity){
+    const baseNames={ uncommon:['Giaco di Pelle','Mantello Grezzo','Cotta Leggera'], rare:['Corazza del Cacciatore','Mantello del Falco'] };
+    const icon='🛡️';
+    const hpBonus = rarity==='rare' ? rndInt(14,22) : rndInt(8,16);
+    const aff={};
+    const pool=[ 'defense','mitigation','projRes','bleedRes' ];
+    const nAff = rarity==='rare' ? 2 : 1;
+    for(let i=0;i<nAff;i++){
+      const k=pick(pool.filter(x=>!(x in aff)));
+      if(k==='defense') aff[k]    = rndInt(rarity==='rare'?3:1, rarity==='rare'?6:3);
+      if(k==='mitigation') aff[k] = +(rarity==='rare' ? (Math.random()*0.04+0.02).toFixed(3) : (Math.random()*0.03+0.01).toFixed(3));
+      if(k==='projRes') aff[k]    = +(rarity==='rare' ? (Math.random()*0.05+0.02).toFixed(3) : (Math.random()*0.04+0.01).toFixed(3));
+      if(k==='bleedRes') aff[k]   = +(rarity==='rare' ? (Math.random()*0.08+0.03).toFixed(3) : (Math.random()*0.06+0.02).toFixed(3));
+    }
+    const name=pick(baseNames[rarity]);
+    return {slot:'armor', icon, name, rarity, hpBonus, affix:aff};
+  }
+  function maybeDropEquip(){
+    // 25% drop; 60% weapon, 40% armor; rarity 70% uncommon, 30% rare
+    if(Math.random()<0.25){
+      const isWeapon = Math.random()<0.6;
+      const rarity = Math.random()<0.7 ? 'uncommon' : 'rare';
+      return isWeapon ? genWeapon(rarity) : genArmor(rarity);
+    }
+    return null;
+  }
+  function itemScore(it){
+    if(it.slot==='weapon'){
+      const a = (it.atkBonus||0)*3;
+      const s = (it.affix.atkSpeed||0)*100;
+      const c = (it.affix.critDmg||0)*120;
+      const l = (it.affix.luck||0)*80;
+      return a+s+c+l;
+    }else{
+      const h = (it.hpBonus||0)*1.2;
+      const d = (it.affix.defense||0)*2.0;
+      const m = (it.affix.mitigation||0)*200;
+      const p = (it.affix.projRes||0)*150;
+      const b = (it.affix.bleedRes||0)*120;
+      return h+d+m+p+b;
+    }
+  }
+  function currentScore(slot){
+    if(slot==='weapon'){ return itemScore({slot:'weapon', atkBonus:(equipped.weapon.atkBonus||0), affix:equipped.weapon.affix||{}}); }
+    return itemScore({slot:'armor', hpBonus:(equipped.armor.hpBonus||0), affix:equipped.armor.affix||{}});
+  }
+  function equipItem(it){
+    if(it.slot==='weapon') equipped.weapon = it;
+    else equipped.armor = it;
+    recomputeStats(false);
+    renderCharIfOpen();
+  }
+  function formatAffix(aff){
+    const out=[];
+    for(const k in aff){
+      const v=aff[k];
+      if(k==='atkSpeed') out.push(`Vel. Attacco +${Math.round(v*100)}%`);
+      if(k==='critDmg')  out.push(`Crit Dmg +${Math.round(v*100)}%`);
+      if(k==='luck')     out.push(`Luck +${Math.round(v*100)}%`);
+      if(k==='defense')  out.push(`Difesa +${v}`);
+      if(k==='mitigation') out.push(`Mitigazione +${Math.round(v*100)}%`);
+      if(k==='projRes')  out.push(`Res. Proiettili +${Math.round(v*100)}%`);
+      if(k==='bleedRes') out.push(`Res. Bleed +${Math.round(v*100)}%`);
+    }
+    return out.join(' · ');
+  }
+  function rarityClass(r){ return r==='rare'?'ra':'u'; }
+
+  function handleDrop(){
+    const it=maybeDropEquip(); if(!it) return;
+    // card
+    const mainStat = it.slot==='weapon' ? `ATK +${it.atkBonus}` : `HP +${it.hpBonus}`;
+    const affTxt = formatAffix(it.affix);
+    const cls = rarityClass(it.rarity);
+    const html = `<div class="r ${cls}">${it.icon} ${escapeHtml(it.name)} <small>(${it.rarity})</small></div>
+                  <div>${mainStat}</div>
+                  <div class="subtle">${escapeHtml(affTxt)}</div>`;
+    // auto-equip se migliore
+    const scoreNew=itemScore(it), scoreCur=currentScore(it.slot);
+    if(scoreNew>scoreCur){
+      equipItem(it);
+      showDropCard(html+`<div style="margin-top:6px;color:#22c55e;font-weight:700">Auto-equip!</div>`, 1800);
+      logSys(`Equip ottenuto: ${it.name} (${it.rarity}) → auto-equip`);
+    }else{
+      const coinsGain = it.rarity==='rare' ? rndInt(8,12) : rndInt(4,7);
+      player.coins += coinsGain;
+      showDropCard(html+`<div style="margin-top:6px;color:#93c5fd">Inferiore → +${coinsGain} monete</div>`, 1600);
+      logSys(`Equip scartato: +${coinsGain} monete`);
+    }
+  }
+
   function attackEnemy(t){
     const now=performance.now(); player.lastAtk=now;
     const base=rndInt(player.atkMin,player.atkMax);
-    const crit=rollCrit(getCritChance()); const mult=crit?(1+(player.stats.critDmg||0)):1;
+    const crit=rollCrit(getCritChance()); const mult=crit?getCritMult():1;
     const dmg=Math.max(0, Math.floor(base*mult));
     t.hp=Math.max(0, t.hp-dmg);
     addDmgText(t.x,t.y,(crit?'CRIT ':'-')+dmg, crit?'#facc15':'#ffd166');
@@ -380,20 +596,28 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       logSys('Nemico sconfitto. +25 XP');
       enemies.splice(enemies.indexOf(t),1);
       gainXP(25);
+      handleDrop(); // ← drop equip leggero
       setTimeout(()=>{ if(WORLD.current==='main'){ const s=randEmpty(); enemies.push(makeArcher(s.x,s.y)); } }, 1000);
     }
     draw();
   }
+
   function applyDamageReduction(amount, source){
-    let dmg=Math.max(0, amount-(player.stats.defense|0));
-    const miti=clamp(player.stats.mitigation||0,0,0.60); dmg=Math.floor(dmg*(1-miti));
-    if(source==='projectile'){ const pr=clamp(player.stats.projRes||0,0,0.60); dmg=Math.floor(dmg*(1-pr)); }
+    let dmg=Math.max(0, amount-(effectiveStat('defense')|0));
+    const miti=clamp(effectiveStat('mitigation'),0,0.60); dmg=Math.floor(dmg*(1-miti));
+    if(source==='projectile'){ const pr=clamp(effectiveStat('projRes'),0,0.60); dmg=Math.floor(dmg*(1-pr)); }
     return Math.max(0,dmg|0);
   }
   function takePlayerDamage(amount,label,source){
     const dmg=applyDamageReduction(amount,source);
     player.hp=Math.max(0, player.hp-dmg); addDmgText(player.x,player.y,label+dmg,'#ff6b6b');
     if(player.hp===0) gameOver();
+  }
+
+  function usePotion(){
+    if(player.pots<=0||player.hp>=player.maxHp) return;
+    player.pots--; const heal=35; player.hp=Math.min(player.maxHp, player.hp+heal);
+    logHeal('Pozione: +'+heal+' HP'); draw();
   }
 
   function gameOver(){
@@ -403,10 +627,11 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   }
   deathRespawn.onclick=()=>{
     const res=buildMap('spawn'); map=res.map; applyTheme(res.theme); WORLD.current='spawn';
-    const exit=findSafeExit('spawn', COLS-2, (ROWS>>1), /*minGap*/1);
+    const exit=findSafeExit('spawn', COLS-2, (ROWS>>1), 1);
     setPlayerPos(exit.x, exit.y);
     player.hp=player.maxHp;
     enemies.length=0; projectiles.length=0; pathQueue=[];
+    ensureSpawnNpcs();
     dead=false; deathOverlay.classList.add('hidden'); cv.style.filter=''; cv.style.opacity='';
     teleportGuardUntil=performance.now()+600;
     entryAggroSilenceUntil=performance.now()+900;
@@ -421,12 +646,11 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     return false;
   }
 
-  /* Portals: safe exit + guards (robusto) */
-  let teleportGuardUntil=0;              // blocca il retrigger per un po'
-  let entryAggroSilenceUntil=0;          // i mob non aggrano subito
-  let mustMoveOffExit=false;             // finché non ti sposti dalla tile d'uscita, ignora portali
-  let lastExit={x:-1,y:-1};              // ricorda l’uscita corrente
-
+  /* Portals robusti */
+  let teleportGuardUntil=0;
+  let entryAggroSilenceUntil=0;
+  let mustMoveOffExit=false;
+  let lastExit={x:-1,y:-1};
   function setPlayerPos(x,y){ player.x=x; player.y=y; player.vx=x; player.vy=y; }
 
   function findSafeExit(worldName, px, py, minGapFromPortal){
@@ -437,17 +661,15 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       [ 2, 0],[-2, 0],[ 0, 2],[ 0,-2],
       [ 3, 0],[-3, 0],[ 0, 3],[ 0,-3]
     ];
-    // prova vicini NON-portale e non adiacenti al portale (gap)
     function isNearPortal(wx,wy){ const list=WORLD.portals[worldName]||[]; for(let i=0;i<list.length;i++){ const p=list[i]; if(Math.abs(wx-p.x)<=gap && Math.abs(wy-p.y)<=gap) return true; } return false; }
     for(const d of candidates){
       const nx=clamp(px+d[0],0,COLS-1), ny=clamp(py+d[1],0,ROWS-1);
       if(!walkable(nx,ny)) continue;
       if(isPortalTile(worldName,nx,ny)) continue;
-      if(isNearPortal(nx,ny)) continue; // evita tile attigue al portale: niente ping-pong
+      if(isNearPortal(nx,ny)) continue;
       if(!tileFree(nx,ny)) continue;
       return {x:nx,y:ny};
     }
-    // fallback: stessa tile target ma NON portale → sposta di 1 in X
     let fx=clamp(px+1,0,COLS-1), fy=py;
     if(!walkable(fx,fy) || isPortalTile(worldName,fx,fy)) fx=clamp(px-1,0,COLS-1);
     return {x:fx,y:fy};
@@ -456,27 +678,21 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function checkPortalEnter(){
     const now=performance.now();
     if(now<teleportGuardUntil) return false;
-    // finché sei sull'ultima tile di uscita, ignora i portali per evitare rimbalzi
     if(mustMoveOffExit && player.x===lastExit.x && player.y===lastExit.y) return false;
 
     const list=WORLD.portals[WORLD.current]||[];
     for(let i=0;i<list.length;i++){
       const p=list[i];
       if(p.x===player.x && p.y===player.y){
-        // teletrasporto
         const next = buildMap(p.to); map=next.map; applyTheme(next.theme); WORLD.current=p.to;
-        // se vai in main, prima spawna i mob in zone lontane
-        if(WORLD.current==='main'){ spawnMain(); } else { enemies.length=0; projectiles.length=0; }
-        // piazza su uscita sicura NON-portale e non adiacente al portale
-        const exit = findSafeExit(p.to, p.tx, p.ty, /*minGapFromPortal*/1);
+        if(WORLD.current==='main'){ spawnMain(); } else { enemies.length=0; projectiles.length=0; ensureSpawnNpcs(); }
+        const exit = findSafeExit(p.to, p.tx, p.ty, 1);
         setPlayerPos(exit.x, exit.y);
         pathQueue.length=0;
 
-        // attiva guardie anti-loop + aggro delay
         teleportGuardUntil = performance.now()+600;
         entryAggroSilenceUntil = performance.now()+900;
 
-        // richiedi di muoversi via dalla tile di uscita prima di poter riusare portali
         mustMoveOffExit = true;
         lastExit = {x:exit.x, y:exit.y};
 
@@ -496,6 +712,11 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
     }
     drawPortals();
+
+    // NPC in spawn
+    if(WORLD.current==='spawn'){
+      for(let i=0;i<NPCS.length;i++){ const n=NPCS[i]; drawNpc(n); }
+    }
 
     for(let i=0;i<enemies.length;i++){
       const e=enemies[i]; const ex=(e.vx!=null?e.vx:e.x), ey=(e.vy!=null?e.vy:e.y);
@@ -519,7 +740,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     const ratio=(player.lvl<MAX_LVL)?Math.min(1,player.exp/need):1;
     const guardLeft=Math.max(0, teleportGuardUntil - performance.now())|0;
     const aggroSilLeft=Math.max(0, entryAggroSilenceUntil - performance.now())|0;
-    statusEl.textContent=`build:${BUILD} | LV ${player.lvl} ${player.lvl<MAX_LVL?('('+Math.floor(ratio*100)+'%)'):''} | HP ${player.hp}/${player.maxHp} | ATK ${player.atkMin}–${player.atkMax} | AggroSil ${aggroSilLeft}ms | TPGuard ${guardLeft}ms`;
+    statusEl.textContent=`build:${BUILD} | LV ${player.lvl} ${player.lvl<MAX_LVL?('('+Math.floor(ratio*100)+'%)'):''} | HP ${player.hp}/${player.maxHp} | ATK ${player.atkMin}–${player.atkMax} | monete ${player.coins} | AggroSil ${aggroSilLeft}ms | TPGuard ${guardLeft}ms`;
   }
   function drawPortals(){
     const list=WORLD.portals[WORLD.current]||[];
@@ -557,11 +778,21 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       ctx.beginPath(); ctx.arc(cx,cy,20,0,Math.PI*2); ctx.stroke(); ctx.restore();
     }
   }
+  function drawNpc(n){
+    const x=n.x*TILE, y=n.y*TILE;
+    ctx.fillStyle=getVar('--shadow'); ctx.beginPath(); ctx.ellipse(x+TILE/2,y+TILE-10,16,6,0,0,Math.PI*2); ctx.fill();
+    // veste viola da maestro
+    ctx.fillStyle='#6d28d9'; ctx.fillRect(x+TILE/2-16, y+TILE/2-22, 32, 36);
+    ctx.fillStyle='#eab308'; ctx.font='18px system-ui'; ctx.textAlign='center';
+    ctx.fillText('🧙‍♂️', x+TILE/2, y+TILE/2-10);
+    // nome
+    ctx.fillStyle='#e5e7eb'; ctx.font='12px system-ui'; ctx.fillText('Maestro', x+TILE/2, y+TILE/2+26);
+  }
 
   /* Target frame placeholder */
   function updateTargetFrame(){}
 
-  /* Guards movement helper */
+  /* Guards / helper */
   function movedOffExitTile(){ return !(player.x===lastExit.x && player.y===lastExit.y); }
 
   /* Loop */
@@ -571,7 +802,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       const now=performance.now();
       const dt=Math.min(200, now-lastStepTs)|0; lastStepTs=now;
 
-      // se ti sei mosso via dalla tile di uscita, riabilita i portali
       if(mustMoveOffExit && movedOffExitTile()) mustMoveOffExit=false;
 
       // Player path follow
@@ -586,17 +816,16 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         }
       }
 
-      // Portali (con guard)
+      // Portali
       checkPortalEnter();
 
-      // Enemy AI con aggro “vicino + LoS”
+      // Enemy AI (aggro vicino+LoS, come prima)
       for(let j=0;j<enemies.length;j++){
         const e=enemies[j];
         e.moveTick=(e.moveTick+1)%e.moveEvery;
         const canMove=(e.moveTick===0);
 
         const distC=chebyshev(e,player);
-        // aggro solo se vicino e con LoS (o molto vicino)
         if(!e.aggro && now>=entryAggroSilenceUntil){
           const canAggro = (distC<=e.aggroRange) && (hasLoS(e.x,e.y,player.x,player.y) || distC<=2);
           if(canAggro){ e.aggro=true; e.lastSeenTs=now; }
@@ -636,7 +865,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
             tryStepAlongPath(e, now);
           }
         } else if(canMove){
-          // rientro
           if((e.x!==e.spawnX || e.y!==e.spawnY)){
             if(!e.path || !e.path.length) e.path=bfs(e.x,e.y,e.spawnX,e.spawnY)||[];
             tryStepAlongPath(e, now);
@@ -653,7 +881,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         if(nx===player.x && ny===player.y){
           const base=rndInt(pr.dmg-1, pr.dmg+1);
           takePlayerDamage(base, '-', 'projectile');
-          if(Math.random() < (pr.bleedChance||0)){ /* bleed placeholder */ }
           projectiles.splice(pi,1); continue;
         }
         startTween(pr, pr.x, pr.y, nx, ny, now); pr.x=nx; pr.y=ny;
@@ -691,7 +918,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     const fx=e.x, fy=e.y; e.x=nxt.x; e.y=nxt.y; startTween(e,fx,fy,e.x,e.y,now);
   }
 
-  /* Character panel */
+  /* Panels */
   function pct(v){ return Math.round((v||0)*100); }
   function renderCharPanel(){
     if(charWin.classList.contains('hidden')) return;
@@ -702,26 +929,53 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       ['HP',''+player.hp+' / '+player.maxHp],
       ['Attacco',''+player.atkMin+'–'+player.atkMax],
       ['Crit Chance', pct(getCritChance())+'%'],
-      ['Crit Damage', pct(player.stats.critDmg||0)+'%'],
+      ['Crit Damage', pct(effectiveStat('critDmg'))+'%'],
       ['CD Attacco', getAtkCd()+' ms']
     ];
     const stats=[
-      ['Difesa (flat)', (player.stats.defense|0)],
-      ['Mitigazione', pct(clamp(player.stats.mitigation||0,0,0.60))+'%'],
-      ['Res. Proiettili', pct(clamp(player.stats.projRes||0,0,0.60))+'%'],
-      ['Res. Bleed', pct(clamp(player.stats.bleedRes||0,0,0.70))+'%'],
-      ['Vel. Attacco', pct(clamp(player.stats.atkSpeed||0,0,0.50))+'%'],
-      ['Luck (Crit +)', pct(player.stats.luck||0)+'%']
+      ['Difesa (flat)', (effectiveStat('defense')|0)],
+      ['Mitigazione', pct(clamp(effectiveStat('mitigation'),0,0.60))+'%'],
+      ['Res. Proiettili', pct(clamp(effectiveStat('projRes'),0,0.60))+'%'],
+      ['Res. Bleed', pct(clamp(effectiveStat('bleedRes'),0,0.70))+'%'],
+      ['Vel. Attacco', pct(clamp(effectiveStat('atkSpeed'),0,0.50))+'%'],
+      ['Luck (Crit +)', pct(effectiveStat('luck'))+'%']
     ];
+    const eq=[
+      ['Arma', `${equipped.weapon.icon} ${equipped.weapon.name} <span class="subtle">(${equipped.weapon.rarity})</span><br>ATK +${equipped.weapon.atkBonus||0} <span class="subtle">· ${escapeHtml(formatAffix(equipped.weapon.affix||{}))}</span>`],
+      ['Armatura', `${equipped.armor.icon} ${equipped.armor.name} <span class="subtle">(${equipped.armor.rarity})</span><br>HP +${equipped.armor.hpBonus||0} <span class="subtle">· ${escapeHtml(formatAffix(equipped.armor.affix||{}))}</span>`]
+    ];
+    eqInfo.innerHTML =eq.map(kv=>`<div class="stat" style="grid-column:span 1"><span class="k">${kv[0]}</span><span class="v">${kv[1]}</span></div>`).join('');
     charBasics.innerHTML=basics.map(kv=>`<div class="stat"><span class="k">${kv[0]}</span><span class="v">${kv[1]}</span></div>`).join('');
     charStats.innerHTML =stats.map(kv=>`<div class="stat"><span class="k">${kv[0]}</span><span class="v">${kv[1]}</span></div>`).join('');
   }
   function renderCharIfOpen(){ renderCharPanel(); }
 
+  function renderNpcValues(){
+    if(npcWin.classList.contains('hidden')) return;
+    const rows=[
+      `ATK: <b>${player.atkMin}–${player.atkMax}</b>`,
+      `CD Attacco: <b>${getAtkCd()} ms</b>`,
+      `Crit Chance: <b>${pct(getCritChance())}%</b> · Crit Dmg: <b>${pct(effectiveStat('critDmg'))}%</b>`,
+      `HP Max: <b>${player.maxHp}</b>`,
+      `Difesa: <b>${effectiveStat('defense')|0}</b> · Mitigazione: <b>${pct(clamp(effectiveStat('mitigation'),0,0.60))}%</b>`,
+      `Res. Proiettili: <b>${pct(clamp(effectiveStat('projRes'),0,0.60))}%</b> · Res. Bleed: <b>${pct(clamp(effectiveStat('bleedRes'),0,0.70))}%</b>`,
+      `Vel. Attacco: <b>${pct(clamp(effectiveStat('atkSpeed'),0,0.50))}%</b> · Luck: <b>${pct(effectiveStat('luck'))}%</b>`
+    ];
+    npcValues.innerHTML = `<div><b>Valori Attuali</b></div><div class="subtle">${rows.join(' · ')}</div>`;
+  }
+  function openMaestro(){
+    npcWin.classList.remove('hidden');
+    renderNpcValues();
+  }
+
   /* Save/Load/Reset */
+  const btnSave=document.getElementById('btnSave');
+  const btnLoad=document.getElementById('btnLoad');
+  const btnReset=document.getElementById('btnReset');
+
   btnSave.onclick=()=>{
     try{
-      localStorage.setItem(SAVE_KEY, JSON.stringify({map, player, enemies, world:WORLD.current}));
+      localStorage.setItem(SAVE_KEY, JSON.stringify({map, player, enemies, world:WORLD.current, equipped}));
       toast('Salvato');
     }catch(e){ panic('save', e); }
   };
@@ -731,10 +985,12 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       const d=JSON.parse(raw);
       if(d && d.map && d.map.length===ROWS){ for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) map[y][x]=d.map[y][x]|0; }
       if(d && d.player){ for(const k in d.player){ if(d.player.hasOwnProperty(k)) player[k]=d.player[k]; } }
+      if(d && d.equipped){ equipped=d.equipped; }
       enemies.length=0; if(d && Array.isArray(d.enemies)){ for(let i=0;i<d.enemies.length;i++) enemies.push(d.enemies[i]); }
       if(d && d.world){ WORLD.current=d.world; applyTheme(WORLD.current==='main'?THEMES.main:THEMES.spawn); }
+      if(WORLD.current==='spawn') ensureSpawnNpcs(); else NPCS.length=0;
       setPlayerPos(player.x,player.y); pathQueue.length=0; dead=false; deathOverlay.classList.add('hidden'); cv.style.filter=''; cv.style.opacity='';
-      recomputeStats(false); draw(); renderCharIfOpen(); toast('Caricato');
+      recomputeStats(false); draw(); renderCharIfOpen(); renderNpcValues(); toast('Caricato');
     }catch(e){ panic('load', e); }
   };
   btnReset.onclick=()=>location.reload();
