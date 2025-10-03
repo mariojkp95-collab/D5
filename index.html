@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Drakoria — HUD-5</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <div><strong>Drakoria</strong> <span class="muted">core</span></div>
+  <div>
+    <button id="btnQuest">Quest</button>
+    <button id="btnMini">Mini-mappa</button>
+    <button id="btnAbilities">Abilità</button>
+    <button id="btnInventory">Inventario</button>
+    <button id="btnLog">Log</button>
+    <button id="btnSave">Save</button>
+    <button id="btnLoad">Load</button>
+    <button id="btnReset">Reset</button>
+  </div>
+</header>
+
+<main>
+  <canvas id="game" width="960" height="576" aria-label="Gioco"></canvas>
+  <p class="help">
+    Tap per muoverti • tap su un <b>nemico</b> per selezionarlo (Target Frame) • <b>doppio tap</b> per auto-inseguire •
+    <b>🗡️</b> / SPAZIO attacca • Abilità da <b>Abilità</b> • Entra su un <b>sacco</b> per loot.  
+    Dall’<b>Inventario</b> → schede stile NosTale, e bottone <b>→ Barra</b> per assegnare ai numeri 1–5.
+  </p>
+  <div id="status"></div>
+</main>
+
+<!-- HUD buttons (nascosti: l’HUD è in-canvas) -->
+<button id="btnAttack" class="fab" aria-label="Attacca">🗡️</button>
+<canvas id="atkCdCanvas" width="56" height="56" aria-hidden="true"></canvas>
+<button id="btnUsePotion" class="fab" aria-label="Usa pozione">🍵</button>
+<button id="btnLoot" class="fab" aria-label="Apri loot">👜</button>
+
+<!-- Cast bar -->
+<div id="castWrap" class="cast" aria-live="polite">
+  <div class="row"><div class="name" id="castName">—</div><div id="castTime">—</div></div>
+  <div class="bar"><div id="castBar"></div></div>
+</div>
+
+<!-- Mini mappa -->
+<div id="miniWrap" class="hidden"><canvas id="mini" width="80" height="48" aria-label="Mini mappa"></canvas></div>
+
+<!-- Hotbar -->
+<div class="hotbar" id="hotbar">
+  <div class="slot" id="slot1"><span class="lbl">1</span><span class="cap" id="slotCap1">🍵</span><span class="cnt" id="cntPot">0</span></div>
+  <div class="slot" id="slot2"><span class="lbl">2</span><span class="cap" id="slotCap2">—</span></div>
+  <div class="slot" id="slot3"><span class="lbl">3</span><span class="cap" id="slotCap3">—</span></div>
+  <div class="slot" id="slot4"><span class="lbl">4</span><span class="cap" id="slotCap4">—</span></div>
+  <div class="slot" id="slot5"><span class="lbl">5</span><span class="cap" id="slotCap5">—</span></div>
+</div>
+
+<!-- Quest -->
+<aside id="questPanel" class="quest hidden" aria-live="polite">
+  <div class="q-header"><span>Quest</span><button id="btnQuestClose" class="q-close" aria-label="Chiudi">×</button></div>
+  <div id="questBody" class="q-body"></div>
+</aside>
+
+<!-- Abilità -->
+<section id="abilWin" class="abil hidden" role="dialog" aria-modal="true" aria-label="Abilità">
+  <div class="abil-h"><span>Abilità</span><button id="abilClose" class="abil-x">×</button></div>
+  <div id="abilGrid" class="abil-grid"></div>
+</section>
+
+<!-- Loot -->
+<section id="lootWin" class="loot hidden" role="dialog" aria-modal="true" aria-label="Bottino">
+  <div class="loot-h"><span>Bottino</span><button id="lootClose" class="loot-x">×</button></div>
+  <div id="lootBody" class="loot-b"></div>
+  <div class="loot-f"><button id="lootTakeAll" class="btn">Prendi tutto</button></div>
+</section>
+
+<!-- Inventory -->
+<section id="invWin" class="inv hidden" role="dialog" aria-modal="true" aria-label="Inventario">
+  <div class="inv-h"><span>Inventario</span><button id="invClose" class="inv-x">×</button></div>
+  <div class="inv-tabs" id="invTabs"></div>
+  <div class="inv-body">
+    <div class="inv-eq">
+      <div class="slotEq" id="eqWeapon">
+        <div class="info"><span class="ico">🗡️</span><span class="badge">Arma</span> <span class="eqName" id="eqWeaponName">—</span></div>
+        <button class="act" id="btnUnequipWeapon" disabled>Rimuovi</button>
+      </div>
+      <div class="slotEq" id="eqArmor">
+        <div class="info"><span class="ico">🛡️</span><span class="badge">Armatura</span> <span class="eqName" id="eqArmorName">—</span></div>
+        <button class="act" id="btnUnequipArmor" disabled>Rimuovi</button>
+      </div>
+    </div>
+    <div class="inv-grid" id="invGrid"></div>
+  </div>
+</section>
+
+<!-- Slot picker -->
+<section id="slotPicker" class="picker hidden" role="dialog" aria-modal="true">
+  <h3>Assegna a Barra Rapida</h3>
+  <div class="grid">
+    <button class="pickBtn" data-slot="1">1</button>
+    <button class="pickBtn" data-slot="2">2</button>
+    <button class="pickBtn" data-slot="3">3</button>
+    <button class="pickBtn" data-slot="4">4</button>
+    <button class="pickBtn" data-slot="5">5</button>
+  </div>
+</section>
+
+<!-- Target Frame + DPS -->
+<div id="tframe" class="tframe" aria-live="polite">
+  <div class="trow">
+    <div>
+      <div id="tfName" class="tname">—</div>
+      <div id="tfKind" class="tkind">—</div>
+    </div>
+    <div id="tfDist" class="tkind">—</div>
+  </div>
+  <div class="thp"><div id="tfHpBar"></div></div>
+  <div id="tfHpTxt" class="thpTxt">—</div>
+</div>
+
+<div id="dpsPanel" class="dps">
+  <div class="h">DPS</div>
+  <div class="v" id="dpsText">0 (picco 0)</div>
+</div>
+
+<!-- Combat Log -->
+<section id="logPanel" class="log hidden">
+  <div class="h"><span>Combat Log</span><button id="btnLogClose" class="q-close" style="height:24px;width:24px">×</button></div>
+  <div id="logBody" class="b"></div>
+</section>
+
+<div id="errBox" class="err" style="display:none"></div>
+
+<!-- Overlay Game Over -->
+<div id="deathOverlay" class="death hidden" role="dialog" aria-modal="true" aria-label="Game Over">
+  <div class="death-box">
+    <div class="death-title">Sei morto</div>
+    <div class="death-sub">Usa <b>Load</b> per riprendere dall'ultimo salvataggio oppure <b>Reset</b> per ricominciare.</div>
+    <div class="death-actions">
+      <button id="deathLoad" class="btn">Load</button>
+      <button id="deathReset" class="btn">Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- JS -->
+<script src="js/game.js"></script>
+<script src="js/patch-cooldown.js"></script>
+<script src="js/patch-abil-ux-v5.js"></script>
+</body>
+</html>
