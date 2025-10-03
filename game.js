@@ -388,7 +388,7 @@ function applyItem(it){
     // OGGETTI + PROIETTILI
     var coins=[], potions=[], projectiles=[];
 
-    // inizializza la mappa iniziale
+    // inizializza la mappa iniziale (lasciamo spawn vuoto, come nel tuo design)
     var initRes = buildMap('spawn');
     map = initRes.map;
     applyTheme(initRes.themeVars);
@@ -463,7 +463,10 @@ function applyItem(it){
 
     // UTILS
     function inside(x,y){ return x>=0&&y>=0&&x<COLS&&y<ROWS; }
-    function manhattan(a,b){ return Math.abs(a.x - b.x) + Math.abs(a.y - a.y); } // NB: manhattan non usato molto
+
+    // FIX: manhattan corretto
+    function manhattan(a,b){ return Math.abs(a.x - b.x) + Math.abs(a.y - b.y); }
+
     function randEmpty(){
       for (var tries=0; tries<200; tries++){
         var x = rndInt(0, COLS-1), y = rndInt(0, ROWS-1);
@@ -478,7 +481,20 @@ function applyItem(it){
     }
     function chebyshev(a,b){ var dx=Math.abs(a.x-b.x), dy=Math.abs(a.y-b.y); return dx>dy?dx:dy; }
     function rndInt(a,b){ return a+((Math.random()*(b-a+1))|0); }
-    function getVar(n){ var cs = window.getComputedStyle(document.documentElement); return cs.getPropertyValue(n).trim(); }
+
+    // FIX: getVar con fallback locali (se CSS non carica)
+    function getVar(n){
+      var cs = window.getComputedStyle(document.documentElement);
+      var v = cs.getPropertyValue(n).trim();
+      if (v) return v;
+      var F = {
+        '--tileA':'#0e2a1e','--tileB':'#123022','--block':'#15223b',
+        '--player':'#3b82f6','--enemy':'#ef4444','--coin':'#facc15',
+        '--shadow':'#0006','--hpBack':'#1f2937'
+      };
+      return F[n] || '#000';
+    }
+
     function rollCrit(chance){ return Math.random() < (chance||0); }
     function tileFree(x,y){
       if(map[y][x]!==0) return false;
@@ -1379,7 +1395,7 @@ function applyItem(it){
     function logSys(msg){ pushLog(escapeHtml(msg), 'sys'); }
     function escapeHtml(s){
       return String(s).replace(/[&<>"']/g, function(m){
-        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]);
+        return ({'&':'&amp;','<':'&lt;','&gt;':'&gt;','"':'&quot;',"'":'&#39;'}[m]);
       });
     }
 
