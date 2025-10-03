@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Drakoria — OneFile (HUD-6)</title>
+<title>Drakoria — OneFile (HUD-7)</title>
 <style>
 :root{
   --bg:#0b1224; --panel:#0f172a; --stroke:#1f2a44; --text:#e5e7eb; --muted:#9ca3af;
@@ -22,7 +22,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 #status{margin-top:8px;color:var(--muted)}
 .err{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:#7f1d1d;color:#fff;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;z-index:50;font-weight:600;max-width:90vw;white-space:pre-wrap;display:none}
 
-/* Log compatto (opzionale) */
+/* Log compatto */
 .log{position:fixed; left:16px; bottom:16px; width:300px; max-width:80vw;
   background:rgba(15,23,42,.9); border:1px solid #1f2a44; border-radius:10px; padding:8px 10px; z-index:26}
 .log .h{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-weight:700}
@@ -42,12 +42,59 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 .death-actions{display:flex; gap:8px; justify-content:flex-end}
 .btn{border:1px solid #31406e;background:#2563eb;color:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}
 .btn:disabled{background:#1f2a44;color:#9aa0ad;cursor:not-allowed}
+
+/* Loot window */
+.loot{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);width:320px; max-width:92vw; background:#0f172a; border:1px solid #1f2a44; border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.45); z-index:40;}
+.loot-h{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #1f2a44;font-weight:700}
+.loot-x{width:32px;height:26px;border-radius:6px;border:1px solid #31406e;background:#26325a;color:#fff;cursor:pointer}
+.loot-b{padding:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.itm{border:1px solid #2a355c;border-radius:10px;background:#0b1224;display:grid;place-items:center;padding:10px;cursor:pointer;position:relative;min-height:72px}
+.itm .lbl{position:absolute;left:6px;top:6px;font:700 11px system-ui;color:#93c5fd}
+.itm .nm{margin-top:6px;font-size:12px;color:#e5e7eb;text-align:center}
+.itm .ico{font-size:22px}
+.r-com{outline:1px solid #334155}
+.r-uncommon{outline:1px solid var(--rare)}
+.r-rare{outline:1px solid var(--epic)}
+.r-legend{outline:1px solid var(--legend)}
+.loot-f{display:flex;gap:8px;justify-content:flex-end;padding:10px;border-top:1px solid #1f2a44}
+
+/* Inventario lite */
+.inv{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:560px; max-width:95vw;
+     background:#0f172a; border:1px solid #1f2a44; border-radius:12px; box-shadow:0 18px 44px rgba(0,0,0,.45); z-index:42}
+.inv-h{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #1f2a44;font-weight:700}
+.inv-x{width:32px;height:26px;border-radius:6px;border:1px solid #31406e;background:#26325a;color:#fff;cursor:pointer}
+.inv-body{padding:10px}
+.inv-eq{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:10px}
+.slotEq{border:1px dashed #2a355c;border-radius:10px;background:#0b1224;padding:8px;min-height:64px;display:flex;align-items:center;justify-content:space-between}
+.slotEq .info{display:flex;align-items:center;gap:8px}
+.slotEq .ico{font-size:22px}
+.inv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.invItem{border:1px solid #2a355c;border-radius:10px;background:#0b1224;padding:8px;min-height:98px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center}
+.invItem .cap{font-size:12px}
+.invItem .row{display:flex; gap:6px; flex-wrap:wrap; justify-content:center}
+.invItem .act{font-size:12px;padding:6px 8px;border:1px solid #31406e;background:#1e40af;color:#fff;border-radius:8px;cursor:pointer}
+.badge{font:700 11px system-ui;color:#93c5fd}
+.eqName{color:#e5e7eb;font-weight:600}
+
+/* Settings */
+.set{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:380px; max-width:94vw;
+     background:#0f172a; border:1px solid #1f2a44; border-radius:12px; box-shadow:0 18px 44px rgba(0,0,0,.45); z-index:44}
+.set-h{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #1f2a44;font-weight:700}
+.set-x{width:32px;height:26px;border-radius:6px;border:1px solid #31406e;background:#26325a;color:#fff;cursor:pointer}
+.set-body{padding:10px}
+.set-row{display:flex;justify-content:space-between;align-items:center;margin:8px 0}
+.hidden{display:none}
+
+/* HUD tooltip status (mobile safe) */
+.toast{position:fixed; left:50%; bottom:84px; transform:translateX(-50%); background:rgba(15,23,42,.9); border:1px solid #1f2a44; color:#e5e7eb; padding:6px 10px; border-radius:10px; z-index:55; display:none}
 </style>
 </head>
 <body>
 <header>
-  <div><strong>Drakoria</strong> <span class="muted">one-file build</span></div>
+  <div><strong>Drakoria</strong> <span class="muted">one-file HUD-7</span></div>
   <div>
+    <button id="btnInv" class="btn">Inventario</button>
+    <button id="btnSettings" class="btn">⚙︎</button>
     <button id="btnSave" class="btn">Save</button>
     <button id="btnLoad" class="btn">Load</button>
     <button id="btnReset" class="btn">Reset</button>
@@ -57,8 +104,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 <main>
   <canvas id="game" width="1344" height="768" aria-label="Gioco"></canvas>
   <p class="help">
-    Tap per muoverti • tap su un <b>nemico</b> per selezionarlo • <b>doppio tap</b> per auto-inseguire • SPAZIO/🗡️ attacca.
-    Portale viola → mondo <b>Main</b> (nemici). La mini-mappa rotonda in alto a sinistra è sempre attiva.  
+    Tap per muoverti • tap su un <b>nemico</b> per target • <b>doppio tap</b> o <b>tap prolungato (0.5s)</b> per auto-inseguire • SPAZIO/🗡️ attacca.  
+    Portale viola → mondo <b>Main</b> (nemici). Mini-mappa rotonda sempre attiva.
   </p>
   <div id="status"></div>
 </main>
@@ -70,6 +117,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 </section>
 
 <div id="errBox" class="err"></div>
+<div id="toast" class="toast"></div>
 
 <!-- Overlay Game Over -->
 <div id="deathOverlay" class="death hidden" role="dialog" aria-modal="true" aria-label="Game Over">
@@ -83,28 +131,88 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   </div>
 </div>
 
+<!-- Loot -->
+<section id="lootWin" class="loot hidden" role="dialog" aria-modal="true" aria-label="Bottino">
+  <div class="loot-h"><span>Bottino</span><button id="lootClose" class="loot-x">×</button></div>
+  <div id="lootBody" class="loot-b"></div>
+  <div class="loot-f">
+    <button id="lootTakeAll" class="btn">Prendi tutto</button>
+  </div>
+</section>
+
+<!-- Inventario -->
+<section id="invWin" class="inv hidden" role="dialog" aria-modal="true" aria-label="Inventario">
+  <div class="inv-h"><span>Inventario</span><button id="invClose" class="inv-x">×</button></div>
+  <div class="inv-body">
+    <div class="inv-eq">
+      <div class="slotEq" id="eqWeapon">
+        <div class="info"><span class="ico">🗡️</span><span class="badge">Arma</span> <span class="eqName" id="eqWeaponName">—</span></div>
+        <button class="act" id="btnUnequipWeapon" disabled>Rimuovi</button>
+      </div>
+      <div class="slotEq" id="eqArmor">
+        <div class="info"><span class="ico">🛡️</span><span class="badge">Armatura</span> <span class="eqName" id="eqArmorName">—</span></div>
+        <button class="act" id="btnUnequipArmor" disabled>Rimuovi</button>
+      </div>
+    </div>
+    <div class="inv-grid" id="invGrid"></div>
+  </div>
+</section>
+
+<!-- Settings -->
+<section id="setWin" class="set hidden" role="dialog" aria-modal="true" aria-label="Impostazioni">
+  <div class="set-h"><span>Impostazioni</span><button id="setClose" class="set-x">×</button></div>
+  <div class="set-body">
+    <div class="set-row">
+      <span>Audio muto</span>
+      <label><input type="checkbox" id="optMute"> Mute</label>
+    </div>
+    <div class="set-row">
+      <span>Velocità</span>
+      <select id="optSpeed">
+        <option value="0.75">0.75×</option>
+        <option value="1" selected>1×</option>
+        <option value="1.25">1.25×</option>
+        <option value="1.5">1.5×</option>
+      </select>
+    </div>
+    <div class="set-row">
+      <span>Auto-pickup (monete/pozioni)</span>
+      <label><input type="checkbox" id="optAuto" checked> Attivo</label>
+    </div>
+  </div>
+</section>
+
 <script>
-/* ===== Drakoria — ONE FILE BUILD (HUD-6) ===== */
+/* ===== Drakoria — ONE FILE BUILD (HUD-7) ===== */
 (function(){
-  var BUILD='HUD-6';
-  var SAVE_KEY='save_of_hud6';
+  var BUILD='HUD-7';
+  var SAVE_KEY='save_of_hud7';
   var cv=document.getElementById('game'); var ctx=cv.getContext('2d');
 
   /* --- UI refs --- */
   var statusEl=document.getElementById('status');
   var btnSave=document.getElementById('btnSave'), btnLoad=document.getElementById('btnLoad'), btnReset=document.getElementById('btnReset');
+  var btnInv=document.getElementById('btnInv'), invWin=document.getElementById('invWin'), invClose=document.getElementById('invClose');
+  var eqWeaponName=document.getElementById('eqWeaponName'), eqArmorName=document.getElementById('eqArmorName');
+  var btnUnequipWeapon=document.getElementById('btnUnequipWeapon'), btnUnequipArmor=document.getElementById('btnUnequipArmor');
+  var invGrid=document.getElementById('invGrid');
+  var setWin=document.getElementById('setWin'), btnSettings=document.getElementById('btnSettings'), setClose=document.getElementById('setClose');
+  var optMute=document.getElementById('optMute'), optSpeed=document.getElementById('optSpeed'), optAuto=document.getElementById('optAuto');
   var errBox=document.getElementById('errBox');
   var logBody=document.getElementById('logBody');
-  var deathOverlay=document.getElementById('deathOverlay');
-  var deathRespawn=document.getElementById('deathRespawn');
-  var deathReset=document.getElementById('deathReset');
+  var deathOverlay=document.getElementById('deathOverlay'), deathRespawn=document.getElementById('deathRespawn'), deathReset=document.getElementById('deathReset');
+  var lootWin=document.getElementById('lootWin'), lootBody=document.getElementById('lootBody'), lootClose=document.getElementById('lootClose'), lootTakeAll=document.getElementById('lootTakeAll');
+  var toastEl=document.getElementById('toast');
 
   function panic(where, e){
     errBox.style.display='block';
     errBox.textContent='ERRORE '+where+': '+(e && (e.message||e));
     if(window.console&&console.error) console.error('[PANIC]', where, e);
   }
-  function toast(msg){ statusEl.textContent='['+BUILD+'] '+msg; }
+  function toast(msg){
+    toastEl.textContent=msg; toastEl.style.display='block';
+    clearTimeout(toastEl.__t); toastEl.__t=setTimeout(function(){ toastEl.style.display='none'; }, 1100);
+  }
 
   /* --- World constants --- */
   var COLS=21, ROWS=12, TILE=64;
@@ -140,7 +248,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     var cols=COLS, rows=ROWS, m=[];
     for (var y=0;y<rows;y++){ var row=[]; for (var x=0;x<cols;x++) row.push(0); m.push(row); }
     if (name==='main'){
-      // qualche blocco a caso:
       for (var i=0;i<16;i++){
         var bx=(Math.random()*cols|0), by=(Math.random()*rows|0);
         if (isPortalTile('main', bx, by)) continue;
@@ -150,6 +257,14 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     }
     return { map:m, themeVars:(name==='main')?THEMES.main:THEMES.spawn };
   }
+
+  /* --- Settings state --- */
+  var SETTINGS = { mute:false, speed:1, autoPickup:true };
+  optMute.onchange=function(){ SETTINGS.mute=optMute.checked; toast(SETTINGS.mute?'Audio muto':'Audio attivo'); };
+  optSpeed.onchange=function(){ SETTINGS.speed=parseFloat(optSpeed.value||'1'); applySpeed(); toast('Velocità '+SETTINGS.speed+'×'); };
+  optAuto.onchange=function(){ SETTINGS.autoPickup=optAuto.checked; toast(SETTINGS.autoPickup?'Auto-pickup ON':'Auto-pickup OFF'); };
+  btnSettings.onclick=function(){ setWin.classList.toggle('hidden'); };
+  setClose.onclick=function(){ setWin.classList.add('hidden'); };
 
   /* --- Game state --- */
   var map=[];
@@ -178,7 +293,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     e.vx=x; e.vy=y; return giveId(e);
   }
 
-  // === NUOVO: gruppi in pattuglia ===
+  // === Gruppi in pattuglia ===
   var _grpId=1;
   function createPatrolGroup(type, count, anchorX, anchorY, radius){
     var id='g'+(_grpId++), made=[];
@@ -200,7 +315,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       var nx=Math.max(0,Math.min(COLS-1,cx+rndInt(-r,r)));
       var ny=Math.max(0,Math.min(ROWS-1,cy+rndInt(-r,r)));
       if (walkable(nx,ny) && tileFree(nx,ny) && !isPortalTile(WORLD.current,nx,ny)){
-        return {x:nx,y:ny};
+        return {x:nx, y:ny};
       }
     }
     return randEmpty();
@@ -208,6 +323,71 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 
   var enemies=[], coins=[], potions=[], projectiles=[], lootBags=[];
   var BAG_TTL_MS=90000, BAG_WARN_MS=10000;
+  var nextItemId=1;
+
+  // Inventario + equip (lite)
+  var inventory=[];
+  var equipped={ weapon:null, armor:null };
+
+  function refreshEquipUi(){
+    eqWeaponName.textContent = equipped.weapon ? (equipped.weapon.icon+' '+equipped.weapon.name) : '—';
+    btnUnequipWeapon.disabled = !equipped.weapon;
+    eqArmorName.textContent  = equipped.armor ? (equipped.armor.icon+' '+equipped.armor.name) : '—';
+    btnUnequipArmor.disabled = !equipped.armor;
+  }
+  function recomputeStats(heal){
+    var atkB=0, hpB=0;
+    if(equipped.weapon && equipped.weapon.atkBonus) atkB+=equipped.weapon.atkBonus;
+    if(equipped.armor  && equipped.armor.hpBonus)   hpB+=equipped.armor.hpBonus;
+    player.maxHp = player.baseMaxHp + hpB;
+    player.atkMin = player.baseAtkMin + atkB;
+    player.atkMax = player.baseAtkMax + atkB;
+    if(heal) player.hp = player.maxHp;
+    if(player.hp>player.maxHp) player.hp = player.maxHp;
+  }
+  function equip(it){
+    if(it.type==='weapon'){ equipped.weapon=it; }
+    if(it.type==='armor'){ equipped.armor=it; }
+    recomputeStats(false); refreshEquipUi(); toast('Equip: '+it.icon+' '+it.name);
+  }
+  function unequip(which){
+    if(which==='weapon'){ equipped.weapon=null; }
+    if(which==='armor'){ equipped.armor=null; }
+    recomputeStats(false); refreshEquipUi();
+  }
+  btnUnequipWeapon.onclick=function(){ unequip('weapon'); };
+  btnUnequipArmor.onclick=function(){ unequip('armor'); };
+
+  function renderInventory(){
+    invGrid.innerHTML='';
+    inventory.forEach(function(it){
+      var d=document.createElement('div');
+      d.className='invItem';
+      d.innerHTML='<div class="cap">'+it.icon+' '+it.name+'</div>'+
+                  (it.qty?('<div class="badge">x'+it.qty+'</div>'):'')+
+                  '<div class="row"></div>';
+      var row=d.querySelector('.row');
+      if(it.type==='weapon' || it.type==='armor'){
+        var beq=document.createElement('button'); beq.className='act'; beq.textContent='Equip';
+        beq.onclick=function(){ equip(it); };
+        row.appendChild(beq);
+      }
+      if(it.type==='potion' || it.type==='consumable'){
+        var busa=document.createElement('button'); busa.className='act'; busa.textContent='Usa';
+        busa.onclick=function(){
+          var healed=0;
+          if(it.heal){ var before=player.hp; player.hp=Math.min(player.maxHp, player.hp+it.heal); healed=player.hp-before; if(healed>0){ logHeal('Consumabile: +'+healed+' HP.'); } }
+          if(typeof it.qty==='number'){ it.qty--; if(it.qty<=0){ var idx=inventory.indexOf(it); if(idx>=0) inventory.splice(idx,1); } }
+          renderInventory(); draw();
+        };
+        row.appendChild(busa);
+      }
+      invGrid.appendChild(d);
+    });
+    refreshEquipUi();
+  }
+  btnInv.onclick=function(){ invWin.classList.toggle('hidden'); renderInventory(); };
+  invClose.onclick=function(){ invWin.classList.add('hidden'); };
 
   // Init su spawn (vuoto apposta)
   ;(function init(){
@@ -215,6 +395,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     map=res.map; applyTheme(res.themeVars);
     WORLD.current='spawn'; worldInited.spawn=true;
     enemies.length=0; // nessun nemico nello spawn
+    recomputeStats(true);
   })();
 
   /* --- Utils --- */
@@ -243,7 +424,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       }
       for(var d=0; d<4; d++){
         var nx=c.x+dirs[d][0], ny=c.y+dirs[d][1], kk=nx+','+ny;
-        if(!walkable(nx,ny) || seen[kk]) continue; seen[kk]=1; prev[kk]={x:c.x,y:c.y}; q.push({x:nx,y:ny});
+        if(!walkable(nx,ny) || seen[kk]) continue; seen[kk]=1; prev[kk]={x:c.x,y:c.y}; q.push({x:nx,ny:ny});
       }
     } return null;
   }
@@ -278,9 +459,20 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     for(var j=0;j<projectiles.length;j++) tweenUpdate(projectiles[j], now);
   }
 
-  /* --- Input --- */
+  /* --- Input + HUD in-canvas --- */
+  var HUD = { atk:null, pot:null, loot:null };
+  function layoutHud(){
+    HUD.atk  = { x: cv.width - 86,  y: cv.height - 86, w: 72, h: 72 }; // 🗡️
+    HUD.pot  = { x: cv.width - 166, y: cv.height - 86, w: 72, h: 72 }; // 🍵
+    HUD.loot = { x: 14,             y: cv.height - 86, w: 72, h: 72 }; // 👜
+  }
+  window.addEventListener('resize', layoutHud, false);
+  layoutHud();
+
   var target=null, autoChase=false, lastEnemyTapTs=0, lastEnemyTapId=-1;
   var pathQueue=[];
+  var holdTimer=null, holdStart=0, holdPos=null;
+
   function canvasToTile(ev){
     var r=cv.getBoundingClientRect(), t=ev.touches&&ev.touches[0];
     var cx=t?t.clientX:ev.clientX, cy=t?t.clientY:ev.clientY;
@@ -291,45 +483,64 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function enemyRect(e){ var x=e.x*TILE+TILE/2-16, y=e.y*TILE+TILE/2-22; return {x:x,y:y,w:32,h:36}; }
   function inRect(px,py,r){ return px>=r.x&&px<=r.x+r.w&&py>=r.y&&py<=r.y+r.h; }
 
-  function onCanvasTap(ev){
-    try{
-      if(dead) return;
-      ev.preventDefault();
-      var m=canvasToTile(ev), now=performance.now();
-
-      // targeting via hitbox del “corpo” (rettangolo)
-      var clicked=null;
-      for(var i=0;i<enemies.length;i++){ var ee=enemies[i]; if(inRect(m.sx,m.sy,enemyRect(ee))){ clicked=ee; break; } }
-      if(clicked){
-        if(lastEnemyTapId===clicked.id && (now-lastEnemyTapTs)<=350){ target=clicked; autoChase=true; pathQueue=[]; }
-        else { target=clicked; autoChase=false; }
-        lastEnemyTapId=clicked.id; lastEnemyTapTs=now; updateTargetFrame(); draw(); return;
-      }
-
-      // movement
-      autoChase=false;
-      var p=bfs(player.x,player.y,m.tx,m.ty);
-      if(p&&p.length){ pathQueue=p; } else {
-        var dx=Math.sign(m.tx-player.x), dy=Math.sign(m.ty-player.y);
-        var tryFirst=(Math.abs(m.tx-player.x)>=Math.abs(m.ty-player.y))
-          ? [{x:player.x+dx,y:player.y},{x:player.x,y:player.y+dy}]
-          : [{x:player.x,y:player.y+dy},{x:player.x+dx,y:player.y}];
-        var stepped=false;
-        for(var k=0;k<tryFirst.length;k++){
-          var nxt=tryFirst[k];
-          if(inside(nxt.x,nxt.y)&&walkable(nxt.x,nxt.y)){ pathQueue=[nxt]; stepped=true; break; }
-        }
-        if(!stepped) toast('Nessun percorso');
-      }
-
-      // attacco se adiacente e pronto
-      if(target && chebyshev(player,target)===1 && (now-player.lastAtk)>=player.atkCd){ attackEnemy(target); return; }
-
-      draw(); updateTargetFrame();
-    }catch(e){ panic('input', e); }
+  function onPointerDown(ev){
+    if(dead) return;
+    var m = canvasToTile(ev);
+    holdStart=performance.now(); holdPos={sx:m.sx,sy:m.sy};
+    clearTimeout(holdTimer);
+    holdTimer=setTimeout(function(){
+      // tap prolungato → auto-chase se su un nemico
+      var enemy=getEnemyAtScreen(holdPos.sx, holdPos.sy);
+      if(enemy){ target=enemy; autoChase=true; pathQueue=[]; updateTargetFrame(); toast('Auto-inseguimento'); draw(); }
+    }, 500);
   }
-  cv.addEventListener('pointerup', onCanvasTap, {passive:false});
-  cv.addEventListener('click', onCanvasTap, false);
+  function onPointerUp(ev){
+    if(dead) return;
+    clearTimeout(holdTimer);
+    var m=canvasToTile(ev), now=performance.now();
+
+    // HUD
+    if (inRect(m.sx, m.sy, HUD.atk))  { tryAttackAdjacent(); return; }
+    if (inRect(m.sx, m.sy, HUD.pot))  { usePotion(); return; }
+    if (inRect(m.sx, m.sy, HUD.loot)) { openLootIfOnBag(); return; }
+
+    // Targeting
+    var clicked = getEnemyAtScreen(m.sx, m.sy);
+    if(clicked){
+      if(lastEnemyTapId===clicked.id && (now-lastEnemyTapTs)<=350){ target=clicked; autoChase=true; pathQueue=[]; }
+      else { target=clicked; autoChase=false; }
+      lastEnemyTapId=clicked.id; lastEnemyTapTs=now; updateTargetFrame(); draw(); return;
+    }
+
+    // Movement
+    autoChase=false;
+    var p=bfs(player.x,player.y,m.tx,m.ty);
+    if(p&&p.length){ pathQueue=p; } else {
+      var dx=Math.sign(m.tx-player.x), dy=Math.sign(m.ty-player.y);
+      var tryFirst=(Math.abs(m.tx-player.x)>=Math.abs(m.ty-player.y))
+        ? [{x:player.x+dx,y:player.y},{x:player.x,y:player.y+dy}]
+        : [{x:player.x,y:player.y+dy},{x:player.x+dx,y:player.y}];
+      var stepped=false;
+      for(var k=0;k<tryFirst.length;k++){
+        var nxt=tryFirst[k];
+        if(inside(nxt.x,nxt.y)&&walkable(nxt.x,nxt.y)){ pathQueue=[nxt]; stepped=true; break; }
+      }
+      if(!stepped) toast('Nessun percorso');
+    }
+
+    // attacco se adiacente e pronto
+    if(target && chebyshev(player,target)===1 && (now-player.lastAtk)>=player.atkCd){ attackEnemy(target); return; }
+
+    draw(); updateTargetFrame();
+  }
+  function getEnemyAtScreen(sx,sy){
+    for(var i=0;i<enemies.length;i++){ var ee=enemies[i]; if(inRect(sx,sy,enemyRect(ee))) return ee; }
+    return null;
+  }
+
+  cv.addEventListener('pointerdown', onPointerDown, {passive:false});
+  cv.addEventListener('pointerup', onPointerUp, {passive:false});
+  cv.addEventListener('click', onPointerUp, false);
   window.addEventListener('keydown', function(e){ if(e.code==='Space'||e.key===' ') tryAttackAdjacent(); }, false);
 
   function tryAttackAdjacent(){
@@ -380,33 +591,114 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     if(player.hp===0) gameOver();
   }
 
-  /* --- Loot --- */
-  var nextItemId=1;
+  /* --- Items / Loot --- */
+  function makeItem(name,icon,rarity,type,qty,extra){ var o={ id:nextItemId++, name:name, icon:icon, rarity:rarity, type:type, qty:qty||1 }; if(extra&&typeof extra==='object'){ for(var k in extra)o[k]=extra[k]; } return o; }
+  function makeWeapon(name,icon,rarity,atkBonus){ return { id:nextItemId++, name:name, icon:icon, rarity:rarity, type:'weapon', atkBonus:atkBonus||0 }; }
+  function makeArmor (name,icon,rarity,hpBonus){  return { id:nextItemId++, name:name, icon:icon, rarity:rarity, type:'armor',  hpBonus: hpBonus||0 }; }
+
   function trySpawnLootBag(x,y,kind){
     var items=[];
     if(Math.random()<0.85) items.push(makeItem('Monete','🪙','common','coin', rndInt(1,3)));
     if(Math.random()<0.35) items.push(makeItem('Pozione','🍵','common','potion',1,{heal:35}));
+    if(kind==='slime' || kind==='melee'){
+      if(Math.random()<0.28) items.push(makeItem('Gelatina','🟢','uncommon','material',1));
+      if(Math.random()<0.18) items.push(makeWeapon('Pugnale Rozzo','🗡️','uncommon',2));
+      if(Math.random()<0.10) items.push(makeArmor ('Fascia di Stoffa','🛡️','uncommon',8));
+      if(Math.random()<0.05) items.push(makeWeapon('Lama Viscosa','💚','rare',4));
+    } else {
+      if(Math.random()<0.22) items.push(makeWeapon('Arco Leggero','🏹','uncommon',3));
+      if(Math.random()<0.14) items.push(makeArmor ('Cappuccio di Cuoio','🧢','uncommon',12));
+      if(Math.random()<0.08) items.push(makeWeapon('Arco del Falco','🦅','rare',5));
+      if(Math.random()<0.04) items.push(makeArmor ('Mantello del Cacciatore','🧥','rare',20));
+    }
+    if(Math.random()<0.01) items.push(makeWeapon('Lama Leggendaria','⚡','legend',9));
     if(items.length===0) return;
     lootBags.push({ x:x, y:y, items:items, createdAt:performance.now(), ttlMs:BAG_TTL_MS });
   }
-  function makeItem(name,icon,rarity,type,qty,extra){ var o={ id:nextItemId++, name:name, icon:icon, rarity:rarity, type:type, qty:qty||1 }; if(extra&&typeof extra==='object'){ for(var k in extra)o[k]=extra[k]; } return o; }
-
-  /* --- Target frame (semplice in status) --- */
-  function capFirst(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : ''; }
-  function nameOf(t){ return t && (t.kind ? capFirst(t.kind) : (t.type==='ranged'?'Arciere':'Mostro')); }
-  function updateTargetFrame(){
-    if(!target || enemies.indexOf(target)===-1){ hideTargetFrame(); return; }
-    var ratio=Math.max(0,Math.min(1,target.hp/target.maxHp));
-    toast('Target: '+nameOf(target)+' HP '+target.hp+'/'+target.maxHp+' ('+Math.round(ratio*100)+'%)');
+  function rarityClass(r){ if(r==='legend')return'r-legend'; if(r==='rare')return'r-rare'; if(r==='uncommon')return'r-uncommon'; return'r-com'; }
+  function applyItem(it){
+    if(it.type==='coin'){
+      var n = it.qty||1; player.coins += n;
+      logLoot('Monete +' + n); return;
+    }
+    if(it.type==='potion'){
+      var m = it.qty||1; player.pots += m;
+      logLoot('Pozioni +' + m); return;
+    }
+    inventory.push(it);
+    logLoot('Ottenuto: '+it.icon+' '+it.name);
+    renderInventoryIfOpen();
   }
-  function hideTargetFrame(){ /* no-op, lasciamo lo status libero */ }
+  function renderLoot(bag){
+    lootBody.innerHTML='';
+    var items=bag.items;
+    for(var i=0;i<items.length;i++){
+      (function(it){
+        var d=document.createElement('div');
+        d.className='itm '+rarityClass(it.rarity);
+        d.innerHTML='<span class="lbl">'+(it.qty?('x'+it.qty):'')+'</span><div class="ico">'+it.icon+
+                    '</div><div class="nm">'+it.name+'</div>';
+        d.addEventListener('click', function(){ takeItem(bag,it.id); }, false);
+        lootBody.appendChild(d);
+      })(items[i]);
+    }
+    lootTakeAll.disabled = items.length===0;
+    if(items.length===0) lootBody.innerHTML='<div style="grid-column:1/-1;text-align:center;color:#9aa3b2">Vuoto</div>';
+  }
+  function takeItem(bag,itemId){
+    for(var i=0;i<bag.items.length;i++){
+      if(bag.items[i].id===itemId){ var it=bag.items[i]; applyItem(it); bag.items.splice(i,1); break; }
+    }
+    if(bag.items.length===0){
+      lootBags.splice(lootBags.indexOf(bag),1);
+      lootWin.classList.add('hidden');
+    }else{
+      renderLoot(bag);
+    }
+    draw();
+    renderInventoryIfOpen();
+  }
+  function autoPickupCommons(bag){
+    var keep=[], coinsGained=0, potsGained=0;
+    for(var i=0;i<bag.items.length;i++){
+      var it=bag.items[i];
+      if(it.type==='coin'){ coinsGained+=it.qty; continue; }
+      if(it.type==='potion'){ potsGained+=it.qty; continue; }
+      keep.push(it);
+    }
+    if(coinsGained>0){ player.coins+=coinsGained; }
+    if(potsGained>0){ player.pots+=potsGained; }
+    bag.items=keep;
+    return bag.items.length===0;
+  }
+  function getBagAt(x,y){ for(var i=0;i<lootBags.length;i++){ var b=lootBags[i]; if(b.x===x&&b.y===y) return b; } return null; }
+  function openLootIfOnBag(){
+    var bag = getBagAt(player.x, player.y);
+    if(!bag){ toast('Nessun bottino qui'); return; }
+    if(SETTINGS.autoPickup){
+      var emptied=autoPickupCommons(bag);
+      if(emptied){ lootBags.splice(lootBags.indexOf(bag),1); draw(); return; }
+    }
+    renderLoot(bag);
+    lootWin.classList.remove('hidden');
+  }
+  lootClose.onclick=function(){ lootWin.classList.add('hidden'); };
+  lootTakeAll.onclick=function(){
+    var bag=getBagAt(player.x,player.y); if(!bag) return;
+    while(bag.items.length) applyItem(bag.items.shift());
+    lootBags.splice(lootBags.indexOf(bag),1);
+    lootWin.classList.add('hidden');
+    renderInventoryIfOpen(); draw();
+  };
+  function renderInventoryIfOpen(){ if(!invWin.classList.contains('hidden')) renderInventory(); }
 
   /* --- Save/Load --- */
   btnSave.onclick=function(){
     try{
       localStorage.setItem(SAVE_KEY, JSON.stringify({
         map:map, player:player, enemies:enemies, coins:coins, potions:potions, projectiles:projectiles,
-        lootBags:lootBags, world:WORLD.current, worldInited:worldInited
+        lootBags:lootBags, world:WORLD.current, worldInited:worldInited,
+        inventory:inventory, equipped:equipped, settings:SETTINGS
       }));
       toast('Salvato.');
     }catch(e){ panic('save', e); }
@@ -424,6 +716,15 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       lootBags.length=0; if(d && d.lootBags) for(i=0;i<d.lootBags.length;i++) lootBags.push(d.lootBags[i]);
       if(d && d.world){ WORLD.current=d.world; applyTheme(WORLD.current==='main'?THEMES.main:THEMES.spawn); }
       if(d && d.worldInited){ worldInited=d.worldInited; }
+      inventory = Array.isArray(d.inventory)? d.inventory : [];
+      equipped  = d && d.equipped ? d.equipped : {weapon:null,armor:null};
+      SETTINGS  = d && d.settings ? d.settings : SETTINGS;
+      // riflette UI settings
+      optMute.checked=!!SETTINGS.mute;
+      optSpeed.value=String(SETTINGS.speed||1);
+      optAuto.checked=!!SETTINGS.autoPickup;
+      applySpeed();
+      recomputeStats(false); refreshEquipUi(); renderInventoryIfOpen();
       toast('Caricato.');
       dead=false; deathOverlay.classList.add('hidden'); cv.style.filter=''; cv.style.opacity='';
     }catch(e){ panic('load', e); }
@@ -445,15 +746,12 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     var size=120, pad=10, rad=size/2, cx=pad+rad, cy=pad+rad;
     ctx.save();
     ctx.beginPath(); ctx.arc(cx,cy,rad,0,Math.PI*2); ctx.closePath(); ctx.clip();
-    // fondo
     ctx.fillStyle='rgba(15,23,42,.85)'; ctx.fillRect(cx-rad,cy-rad,size,size);
-
     var cw=size, ch=size, cellW=cw/COLS, cellH=ch/ROWS, ox=cx-rad, oy=cy-rad;
     for(var y=0;y<ROWS;y++) for(var x=0;x<COLS;x++){
       ctx.fillStyle=(map[y][x]===1)?'#2b3b66':'#164e24';
       ctx.fillRect(ox+x*cellW, oy+y*cellH, cellW, cellH);
     }
-    // loot / oggetti semplici (puntini)
     ctx.fillStyle='#facc15';
     for(var i=0;i<coins.length;i++){ var c=coins[i]; ctx.fillRect(ox+c.x*cellW+1, oy+c.y*cellH+1, 2,2); }
     ctx.fillStyle='#a78bfa';
@@ -461,8 +759,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     for(var eI=0;eI<enemies.length;eI++){ var en=enemies[eI]; ctx.fillStyle=(en.type==='ranged')?'#a855f7':'#ef4444';
       ctx.fillRect(ox+en.x*cellW+1, oy+en.y*cellH+1, 3,3); }
     ctx.fillStyle='#3b82f6'; ctx.fillRect(ox+player.x*cellW+1, oy+player.y*cellH+1, 3,3);
-
-    // bordo
     ctx.restore();
     ctx.beginPath(); ctx.arc(cx,cy,rad,0,Math.PI*2); ctx.strokeStyle='#1f2a44'; ctx.lineWidth=2; ctx.stroke();
   }
@@ -482,16 +778,14 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     return {x:px,y:py};
   }
   function onEnterWorld(name){
-    if(name==='main' && !worldInited.main){
+    if(name==='main' && (!worldInited.main || enemies.length===0)){
       // genera pattuglie
       createPatrolGroup('melee', 3, COLS-5, ROWS-4, 2);
       enemies.push(makeArcher(COLS-4,2));
       worldInited.main=true;
       logSys('Nemici generati in Main.');
     }
-    if(name==='spawn' && !worldInited.spawn){
-      worldInited.spawn=true;
-    }
+    if(name==='spawn' && !worldInited.spawn){ worldInited.spawn=true; }
   }
   function checkPortalAndTeleport(justEntered){
     if(!justEntered) return;
@@ -503,16 +797,15 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     var res=buildMap(hit.to); map=res.map; applyTheme(res.themeVars); WORLD.current=hit.to;
     var exit=findSafeExit(hit.to, hit.tx, hit.ty); player.x=exit.x; player.y=exit.y; player.vx=player.x; player.vy=player.y;
 
-    // pulizia leggera quando si torna allo spawn
-    if(WORLD.current==='spawn'){ coins.length=0; potions.length=0; projectiles.length=0; }
+    if(WORLD.current==='spawn'){ coins.length=0; potions.length=0; projectiles.length=0; } // pulizia leggera
 
     onEnterWorld(WORLD.current);
     pathQueue.length=0; teleportGuardUntil=performance.now()+450;
     logSys('Teletrasporto: '+(WORLD.current==='spawn'?'Spawn':'Main'));
   }
 
-  /* --- Step loop (120ms) --- */
-  var lastPlayerX=player.x, lastPlayerY=player.y;
+  /* --- Step loop (dinamico con speed) --- */
+  var stepTimer=null, baseStepMs=120;
   function step(){
     try{
       // Auto-chase + auto-attack
@@ -543,7 +836,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       checkPortalAndTeleport(justEntered);
       lastPlayerX=player.x; lastPlayerY=player.y;
 
-      // Enemy AI (patrol → aggro → return)
+      // Enemy AI
       var now=performance.now();
       for(var j=0;j<enemies.length;j++){
         var e=enemies[j];
@@ -552,29 +845,25 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 
         var tooFar = chebyshev({x:e.spawnX,y:e.spawnY}, player) > e.leashRange || distC > e.leashRange;
         if(e.aggro){
-          // refresh visione
           if(distC<=1) e.lastSeenTs=now;
           if(tooFar || (now-e.lastSeenTs)>e.loseAggroMs){
             e.aggro=false; e.path=bfs(e.x,e.y,e.spawnX,e.spawnY)||[]; e.mode='return';
           }
         }
 
-        e.moveTick=(e.moveTick+1)%e.moveEvery;
+        // più veloce se speed>1 (divide moveEvery)
+        e.moveTick=(e.moveTick+1)%Math.max(1,Math.round(e.moveEvery/SETTINGS.speed));
         var canMove=(e.moveTick===0);
 
         if(e.aggro){
           if(e.type==='melee'){
             if(canMove){
-              if(chebyshev(e,player)>1){
-                e.path=bfsToAdjacencySmart(e.x,e.y,player.x,player.y,'melee')||e.path||[];
-              }
+              if(chebyshev(e,player)>1){ e.path=bfsToAdjacencySmart(e.x,e.y,player.x,player.y,'melee')||e.path||[]; }
               tryStepAlongPath(e);
             }
             var near=(Math.abs(e.x-player.x)+Math.abs(e.y-player.y))<=1;
-            if(near && (now-e.lastHit)>=e.hitCd){
-              e.lastHit=now; var a=rndAtk(e.atkMin,e.atkMax,0.05,1.5); takePlayerDamage(a.dmg, a.isCrit?'CRIT -':'-');
-            }
-          } else { // ranged
+            if(near && (now-e.lastHit)>=e.hitCd){ e.lastHit=now; var a=rndAtk(e.atkMin,e.atkMax,0.05,1.5); takePlayerDamage(a.dmg, a.isCrit?'CRIT -':'-'); }
+          } else {
             var distM=Math.abs(e.x-player.x)+Math.abs(e.y-player.y);
             var inRange=(distM>=e.rangeMin && distM<=e.rangeMax && (e.x===player.x || e.y===player.y));
             if(inRange){
@@ -591,14 +880,12 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
               var adj=(Math.max(Math.abs(e.x-player.x),Math.abs(e.y-player.y))===1);
               if(adj && (now-e.lastPoke)>=e.pokeCd){ e.lastPoke=now; var a2=rndAtk(4,7,0.05,1.5); takePlayerDamage(a2.dmg, a2.isCrit?'CRIT -':'-'); }
             } else if(canMove){
-              // avvicinati in LOS grossolana
               var pth=bfsToAdjacencySmart(e.x,e.y,player.x,player.y,'ranged') || bfs(e.x,e.y,player.x,player.y);
               if(pth && pth.length>2) pth.length=2;
               e.path=pth||e.path||[]; tryStepAlongPath(e);
             }
           }
         } else {
-          // PATROL semplice: quando idle, ogni tanto muovi verso un punto casuale vicino all'anchor
           if((e.x!==e.spawnX || e.y!==e.spawnY) && e.mode==='return'){
             if(canMove){ if(!e.path || !e.path.length) e.path=bfs(e.x,e.y,e.spawnX,e.spawnY)||[]; tryStepAlongPath(e); }
           } else {
@@ -625,21 +912,31 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         startTween(pr, pr.x, pr.y, nx, ny, performance.now()); pr.x=nx; pr.y=ny;
       }
 
-      // Pickup magnet semplice
+      // Pickup magnet + auto-pickup
       for(var c=coins.length-1;c>=0;c--){ if(chebyshev(coins[c],player)<=1){ coins.splice(c,1); player.coins++; logLoot('Moneta +1'); } }
       for(var p=potions.length-1;p>=0;p--){ if(chebyshev(potions[p],player)<=1){ potions.splice(p,1); player.pots++; logLoot('Pozione +1'); } }
 
-      // Decadimento sacchetti (solo rendering, non UI di raccolta manuale per semplicità)
+      // Decadimento sacchetti
       var nowt=performance.now();
       for(var lb=lootBags.length-1; lb>=0; lb--){
         var b=lootBags[lb]; var remain=b.ttlMs-(nowt-b.createdAt); if(remain<=0){ lootBags.splice(lb,1); }
+        // se sono sopra un sacco e auto-pick ON, raccogli comuni al volo
+        if(remain>0 && SETTINGS.autoPickup && b.x===player.x && b.y===player.y){
+          var emptied=autoPickupCommons(b);
+          if(emptied){ lootBags.splice(lb,1); }
+        }
       }
 
     }catch(e){ panic('step', e); }
   }
+  function applySpeed(){
+    if(stepTimer) clearInterval(stepTimer);
+    var ms = Math.max(40, Math.round(baseStepMs/SETTINGS.speed));
+    stepTimer=setInterval(step, ms);
+  }
 
   /* --- Anim loop --- */
-  var lastFrameTs=performance.now();
+  var lastFrameTs=performance.now(), lastPlayerX=player.x, lastPlayerY=player.y;
   (function anim(){
     updateTweens();
     var now=performance.now(), dt=now-lastFrameTs; lastFrameTs=now;
@@ -647,7 +944,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     draw();
     requestAnimationFrame(anim);
   })();
-  setInterval(step,120);
+  applySpeed(); // avvia il loop step
 
   /* --- Draw --- */
   function draw(){
@@ -658,17 +955,18 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
     }
     drawPortals();
+
     // coins
     ctx.fillStyle=getVar('--coin');
     for(var i=0;i<coins.length;i++){ var c=coins[i]; var cx=c.x*TILE+TILE/2, cy=c.y*TILE+TILE/2; ctx.beginPath(); ctx.arc(cx,cy,10,0,Math.PI*2); ctx.fill(); }
-    // potions (icone stilizzate)
+    // potions
     for(var k=0;k<potions.length;k++){ var po=potions[k]; var px=po.x*TILE, py=po.y*TILE;
       ctx.fillStyle='#8b5cf6'; ctx.fillRect(px+TILE/2-8,py+TILE/2-14,16,20);
       ctx.fillStyle='#a78bfa'; ctx.fillRect(px+TILE/2-5,py+TILE/2-20,10,6);
       ctx.fillStyle='#6d28d9'; ctx.fillRect(px+TILE/2-6,py+TILE/2-24,12,4);
       ctx.fillStyle='#0006'; ctx.beginPath(); ctx.ellipse(px+TILE/2,py+TILE-12,12,4,0,0,Math.PI*2); ctx.fill();
     }
-    // loot bag (icone semplificate)
+    // loot bag
     var now=performance.now();
     for(var lb=0; lb<lootBags.length; lb++){
       var b=lootBags[lb], bx=b.x*TILE, by=b.y*TILE, remain=b.ttlMs-(now-b.createdAt), warn=remain<=BAG_WARN_MS;
@@ -704,6 +1002,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     drawDmgTexts();
     drawXpBar();
     drawMiniOverlay();
+    drawHud();
 
     ctx.fillStyle='#ffffffcc'; ctx.font='bold 14px system-ui'; ctx.fillText('BUILD '+BUILD, 8, cv.height-10);
     statusEl.textContent='LV '+player.lvl+' | HP '+player.hp+'/'+player.maxHp+' | ATK '+player.atkMin+'–'+player.atkMax+' | coins '+player.coins+' | pots '+player.pots;
@@ -747,6 +1046,32 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   }
   function flashCircle(tx,ty,color,alpha,r){ var x=tx*TILE+TILE/2,y=ty*TILE+TILE/2; ctx.save(); ctx.globalAlpha=alpha; ctx.fillStyle=color; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); ctx.restore(); }
 
+  /* --- HUD in-canvas --- */
+  function drawHud(){
+    drawHudBtn(HUD.atk,  '🗡️', (performance.now()-player.lastAtk)>=player.atkCd);
+    drawHudBtn(HUD.pot,  '🍵', player.pots>0);
+    drawHudBtn(HUD.loot, '👜', !!getBagAt(player.x, player.y));
+    function drawHudBtn(r, glyph, enabled){
+      ctx.save();
+      ctx.globalAlpha = enabled ? 1 : 0.55;
+      ctx.fillStyle='rgba(15,23,42,.85)';
+      ctx.strokeStyle='#1f2a44'; ctx.lineWidth=2;
+      roundRect(ctx, r.x, r.y, r.w, r.h, 12); ctx.fill(); ctx.stroke();
+      ctx.font='28px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle='#e5e7eb'; ctx.fillText(glyph, r.x + r.w/2, r.y + r.h/2);
+      ctx.restore();
+    }
+    function roundRect(ctx, x, y, w, h, r){
+      ctx.beginPath();
+      ctx.moveTo(x+r, y);
+      ctx.arcTo(x+w, y, x+w, y+h, r);
+      ctx.arcTo(x+w, y+h, x, y+h, r);
+      ctx.arcTo(x, y+h, x, y, r);
+      ctx.arcTo(x, y, x+w, y, r);
+      ctx.closePath();
+    }
+  }
+
   /* --- Log --- */
   var logLines=[];
   function pushLog(html, cls){
@@ -774,12 +1099,24 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   deathRespawn.onclick=function(){
     // ritorna allo spawn, vita piena
     var res=buildMap('spawn'); map=res.map; applyTheme(res.themeVars); WORLD.current='spawn';
+    // reset flag main così rigeneriamo nemici quando si rientra
+    worldInited.main=false;
     player.hp=player.maxHp; player.x=1; player.y=Math.floor(ROWS/2); player.vx=player.x; player.vy=player.y;
     coins.length=0; potions.length=0; projectiles.length=0; enemies.length=0; lootBags.length=0;
     dead=false; deathOverlay.classList.add('hidden'); cv.style.filter=''; cv.style.opacity='';
     logSys('Respawn effettuato.');
   };
   deathReset.onclick=function(){ location.reload(); };
+
+  // Target frame (messaggio in status)
+  function capFirst(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : ''; }
+  function nameOf(t){ return t && (t.kind ? capFirst(t.kind) : (t.type==='ranged'?'Arciere':'Mostro')); }
+  function updateTargetFrame(){
+    if(!target || enemies.indexOf(target)===-1){ hideTargetFrame(); return; }
+    var ratio=Math.max(0,Math.min(1,target.hp/target.maxHp));
+    toast('Target: '+nameOf(target)+' '+Math.round(ratio*100)+'%');
+  }
+  function hideTargetFrame(){ /* no-op */ }
 
 })();
 </script>
