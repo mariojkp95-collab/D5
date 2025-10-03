@@ -336,6 +336,29 @@
   var lootWin=document.getElementById('lootWin'), lootBody=document.getElementById('lootBody'), lootClose=document.getElementById('lootClose'), lootTakeAll=document.getElementById('lootTakeAll');
   var btnLoot = document.getElementById('btnLoot');
   var btnLog=document.getElementById('btnLog'), logPanel=document.getElementById('logPanel'), logBody=document.getElementById('logBody'), btnLogClose=document.getElementById('btnLogClose');
+  
+  // --- Combat Log helpers (FIX) ---
+var logLines=[];
+function pushLog(html, cls){
+  try{
+    var t=new Date(), hh=String(t.getHours()).padStart(2,'0'), mm=String(t.getMinutes()).padStart(2,'0'), ss=String(t.getSeconds()).padStart(2,'0');
+    logLines.push('<div class="line '+(cls||'')+'">['+hh+':'+mm+':'+ss+'] '+html+'</div>');
+    if(logLines.length>80) logLines.shift();
+    if(logBody){
+      logBody.innerHTML = logLines.join('');
+      logBody.scrollTop = logBody.scrollHeight;
+    }
+  }catch(_){}
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, function(m){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]);
+  });
+}
+function logDmg(msg){ pushLog(escapeHtml(msg), 'dmg'); }
+function logHeal(msg){ pushLog(escapeHtml(msg), 'heal'); }
+function logLoot(msg){ pushLog(escapeHtml(msg), 'loot'); }
+function logSys(msg){ pushLog(escapeHtml(msg), 'sys'); }
 
   // === GAME OVER OVERLAY ===
   var deathOverlay=null, deathLoad=null, deathReset=null;
