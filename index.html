@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Drakoria — OneFile (HUD-8)</title>
+<title>Drakoria — OneFile (HUD-9)</title>
 <style>
 :root{
   --bg:#0b1224; --panel:#0f172a; --stroke:#1f2a44; --text:#e5e7eb; --muted:#9ca3af;
@@ -91,7 +91,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 </head>
 <body>
 <header>
-  <div><strong>Drakoria</strong> <span class="muted">one-file HUD-8</span></div>
+  <div><strong>Drakoria</strong> <span class="muted">one-file HUD-9</span></div>
   <div>
     <button id="btnInv" class="btn">Inventario</button>
     <button id="btnSettings" class="btn">⚙︎</button>
@@ -105,7 +105,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   <canvas id="game" width="1344" height="768" aria-label="Gioco"></canvas>
   <p class="help">
     Tap per muoverti • tap su un <b>nemico</b> per target • <b>doppio tap</b> o <b>tap prolungato (0.5s)</b> per auto-inseguire • SPAZIO/🗡️ attacca.  
-    Portale viola → mondo <b>Main</b> (nemici). Mini-mappa rotonda sempre attiva.
+    Portale viola → mondo <b>Main</b> (solo arcieri). Mini-mappa rotonda sempre attiva. Bleed 🩸 può essere applicato dagli arcieri.
   </p>
   <div id="status"></div>
 </main>
@@ -163,10 +163,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 </section>
 
 <script>
-/* ===== Drakoria — ONE FILE BUILD (HUD-8) ===== */
+/* ===== Drakoria — ONE FILE BUILD (HUD-9) ===== */
 (function(){
-  var BUILD='HUD-8';
-  var SAVE_KEY='save_of_hud8';
+  var BUILD='HUD-9';
+  var SAVE_KEY='save_of_hud9';
   var cv=document.getElementById('game'); var ctx=cv.getContext('2d');
 
   /* UI refs */
@@ -232,14 +232,16 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   var map=[];
   var player={ x:12,y:4, baseMaxHp:100, baseAtkMin:6, baseAtkMax:12, maxHp:100, hp:100, atkMin:6, atkMax:12,
                coins:0,pots:1,lastAtk:0,atkCd:450,lvl:1,exp:0, critChance:0.10, critMult:1.5 };
+  // Status alterati (solo MOB li applicano). Esempio: bleed: {until, nextTick, tickMs, min, max}
+  player.status = { bleed:null };
+
   var enemies=[], coins=[], potions=[], projectiles=[], lootBags=[];
   var BAG_TTL_MS=90000, BAG_WARN_MS=10000;
   var nextItemId=1;
   var _eid=1; function giveId(e){ e.id=_eid++; return e; }
-  function makeSlime(x,y){ var e={kind:'slime',type:'melee',x:x,y:y,spawnX:x,spawnY:y,hp:60,maxHp:60,atkMin:5,atkMax:9,
-    hitCd:800,lastHit:0,aggro:false,aggroRange:5,leashRange:15,loseAggroMs:6000,lastSeenTs:0,moveTick:0,moveEvery:6,path:[],mode:'idle'};
-    e.vx=x; e.vy=y; return giveId(e); }
-  function makeArcher(x,y){ var e={kind:'archer',type:'ranged',x:x,y:y,spawnX:x,spawnY:y,hp:40,maxHp:40,atkCd:1200,lastShot:0,rangeMin:3,rangeMax:7,
+
+  // SOLO ARCHERS (ranged)
+  function makeArcher(x,y){ var e={kind:'archer',type:'ranged',x:x,y:y,spawnX:x,spawnY:y,hp:44,maxHp:44,atkCd:1200,lastShot:0,rangeMin:3,rangeMax:7,
     pokeCd:700,lastPoke:0,aggro:false,aggroRange:7,leashRange:15,loseAggroMs:6000,lastSeenTs:0,moveTick:0,moveEvery:6,path:[],mode:'idle'};
     e.vx=x; e.vy=y; return giveId(e); }
 
@@ -249,7 +251,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     var id='g'+(_grpId++); var made=[];
     for(var i=0;i<count;i++){
       var pos=findFreeNear(anchorX,anchorY,radius||2,30);
-      var e=(type==='ranged')?makeArcher(pos.x,pos.y):makeSlime(pos.x,pos.y);
+      var e=makeArcher(pos.x,pos.y); // solo archers
       e.groupId=id; e.groupAnchor={x:anchorX,y:anchorY}; e.patrolRadius=Math.max(1,(radius|0)||2);
       e.spawnX=e.x; e.spawnY=e.y; e.moveEvery=e.moveEvery||6;
       enemies.push(e); made.push(e);
@@ -283,8 +285,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   }
   function equip(it){ if(it.type==='weapon') equipped.weapon=it; if(it.type==='armor') equipped.armor=it; recomputeStats(false); refreshEquipUi(); toast('Equip: '+it.icon+' '+it.name); }
   function unequip(which){ if(which==='weapon') equipped.weapon=null; if(which==='armor') equipped.armor=null; recomputeStats(false); refreshEquipUi(); }
-  btnUnequipWeapon.onclick=function(){ unequip('weapon'); };
-  btnUnequipArmor.onclick=function(){ unequip('armor'); };
+  document.getElementById('btnUnequipWeapon').onclick=function(){ unequip('weapon'); };
+  document.getElementById('btnUnequipArmor').onclick=function(){ unequip('armor'); };
   function renderInventory(){
     invGrid.innerHTML='';
     inventory.forEach(function(it){
@@ -366,7 +368,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     var r=cv.getBoundingClientRect(), t=ev.touches&&ev.touches[0];
     var cx=t?t.clientX:ev.clientX, cy=t?t.clientY:ev.clientY;
     var sx=(cx-r.left)*(cv.width/r.width), sy=(cy-r.top)*(cv.height/r.height);
-    var tx=Math.max(0,Math.min(COLS-1,(sx/TILE)|0)), ty=Math.max(0,Math.min(ROWS-1,(sy/TILE)|0));
+    var tx=Math.max(0,Math.min(COLS-1),(sx/TILE)|0), ty=Math.max(0,Math.min(ROWS-1),(sy/TILE)|0);
     return {sx:sx, sy:sy, tx:tx, ty:ty};
   }
   function enemyRect(e){ var x=e.x*TILE+TILE/2-16, y=e.y*TILE+TILE/2-22; return {x:x,y:y,w:32,h:36}; }
@@ -423,12 +425,17 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function rollCrit(ch){ return Math.random()<(ch||0); }
   function rndAtk(min,max,critChance,critMult){ var base=rndInt(min,max), isCrit=rollCrit(critChance), dmg=Math.floor(base*(isCrit?(critMult||1.5):1)); return {dmg:dmg,isCrit:isCrit}; }
 
+  // === HIT-STOP + MICRO SHAKE ===
+  var hitStopMs=0, shakeAmp=0;
+  function triggerHitStop(ms,amp){ hitStopMs=Math.max(hitStopMs,ms|0); shakeAmp=Math.max(shakeAmp,amp||0); }
+
   function attackEnemy(t){
     var now=performance.now(); player.lastAtk=now;
     var a=rndAtk(player.atkMin,player.atkMax,player.critChance,player.critMult);
     t.hp=Math.max(0,t.hp-a.dmg);
     addDmgText(t.x,t.y,(a.isCrit?'CRIT ':'-')+a.dmg, a.isCrit?'#facc15':'#ffd166');
     flashCircle(t.x,t.y, a.isCrit?'#ffd166':'#ff0000', a.isCrit?0.35:0.25, a.isCrit?30:26);
+    triggerHitStop(a.isCrit?110:70, a.isCrit?3:2);
     t.aggro=true; t.lastSeenTs=now;
     recordDPS(a.dmg); logDmg('Colpisci '+nameOf(t)+' per '+a.dmg+(a.isCrit?' (critico)':'')+'.');
     updateTargetFrame();
@@ -439,10 +446,12 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       enemies.splice(enemies.indexOf(t),1);
     }
   }
+
   function takePlayerDamage(amount,label){
     player.hp=Math.max(0, player.hp-amount);
     addDmgText(player.x,player.y,label+amount,'#ff6b6b');
     flashCircle(player.x,player.y,'#ff0000',0.25,26);
+    triggerHitStop(70,2);
     logDmg('Subisci '+amount+' danni.');
     if(player.hp===0) gameOver();
   }
@@ -454,8 +463,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function trySpawnLootBag(x,y,kind){
     var items=[]; if(Math.random()<0.85) items.push(makeItem('Monete','🪙','common','coin', rndInt(1,3)));
     if(Math.random()<0.35) items.push(makeItem('Pozione','🍵','common','potion',1,{heal:35}));
-    if(kind==='slime'||kind==='melee'){ if(Math.random()<0.28) items.push(makeItem('Gelatina','🟢','uncommon','material',1)); if(Math.random()<0.18) items.push(makeWeapon('Pugnale Rozzo','🗡️','uncommon',2)); if(Math.random()<0.10) items.push(makeArmor('Fascia di Stoffa','🛡️','uncommon',8)); if(Math.random()<0.05) items.push(makeWeapon('Lama Viscosa','💚','rare',4)); }
-    else { if(Math.random()<0.22) items.push(makeWeapon('Arco Leggero','🏹','uncommon',3)); if(Math.random()<0.14) items.push(makeArmor('Cappuccio di Cuoio','🧢','uncommon',12)); if(Math.random()<0.08) items.push(makeWeapon('Arco del Falco','🦅','rare',5)); if(Math.random()<0.04) items.push(makeArmor('Mantello del Cacciatore','🧥','rare',20)); }
+    if(Math.random()<0.10) items.push(makeWeapon('Arco Leggero','🏹','uncommon',3));
+    if(Math.random()<0.06) items.push(makeArmor('Cappuccio di Cuoio','🧢','uncommon',12));
+    if(Math.random()<0.04) items.push(makeWeapon('Arco del Falco','🦅','rare',5));
+    if(Math.random()<0.02) items.push(makeArmor('Mantello del Cacciatore','🧥','rare',20));
     if(Math.random()<0.01) items.push(makeWeapon('Lama Leggendaria','⚡','legend',9));
     if(items.length===0) return; lootBags.push({ x:x, y:y, items:items, createdAt:performance.now(), ttlMs:BAG_TTL_MS });
   }
@@ -533,7 +544,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     for(var y=0;y<ROWS;y++) for(var x=0;x<COLS;x++){ ctx.fillStyle=(map[y][x]===1)?'#2b3b66':'#164e24'; ctx.fillRect(ox+x*cellW, oy+y*cellH, cellW, cellH); }
     ctx.fillStyle='#facc15'; for(var i=0;i<coins.length;i++){ var c=coins[i]; ctx.fillRect(ox+c.x*cellW+1, oy+c.y*cellH+1, 2,2); }
     ctx.fillStyle='#a78bfa'; for(var p=0;p<potions.length;p++){ var po=potions[p]; ctx.fillRect(ox+po.x*cellW+1, oy+po.y*cellH+1, 2,2); }
-    for(var eI=0;eI<enemies.length;eI++){ var en=enemies[eI]; ctx.fillStyle=(en.type==='ranged')?'#a855f7':'#ef4444'; ctx.fillRect(ox+en.x*cellW+1, oy+en.y*cellH+1, 3,3); }
+    for(var eI=0;eI<enemies.length;eI++){ var en=enemies[eI]; ctx.fillStyle='#a855f7'; ctx.fillRect(ox+en.x*cellW+1, oy+en.y*cellH+1, 3,3); }
     ctx.fillStyle='#3b82f6'; ctx.fillRect(ox+player.x*cellW+1, oy+player.y*cellH+1, 3,3);
     ctx.restore(); ctx.beginPath(); ctx.arc(cx,cy,rad,0,Math.PI*2); ctx.strokeStyle='#1f2a44'; ctx.lineWidth=2; ctx.stroke();
   }
@@ -545,17 +556,17 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     for(var i=0;i<cand.length;i++){
       var nx=px+cand[i][0], ny=py+cand[i][1];
       if(!inside(nx,ny)) continue; if(!walkable(nx,ny)) continue; if(isPortalTile(worldName,nx,ny)) continue; if(!tileFree(nx,ny)) continue;
-      return {x:nx,y:ny};
+      return {x:nx, y:ny};
     }
-    return {x:px,y:py};
+    return {x:px, y:py};
   }
   function onEnterWorld(name){
     if(name==='main' && (!worldInited.main || enemies.length===0)){
-      // spawn iniziale
-      createPatrolGroup('melee', 3, COLS-5, ROWS-4, 2);
+      // spawn iniziale: SOLO ARCHIERI
+      createPatrolGroup('ranged', 3, COLS-5, ROWS-4, 2);
       enemies.push(makeArcher(COLS-4,2));
       worldInited.main=true;
-      logSys('Nemici generati in Main.');
+      logSys('Arcieri generati in Main.');
     }
     if(name==='spawn' && !worldInited.spawn){ worldInited.spawn=true; }
   }
@@ -581,14 +592,17 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function setSpeed(s){ SETTINGS.speed=(+s)||1; simStepMs=Math.max(40, SIM_BASE/SETTINGS.speed); }
   setSpeed(1); // init
 
-  // Respawn periodico in Main
-  var ENEMY_CAP_MAIN=5;
+  // Respawn periodico in Main (solo arcieri)
+  var ENEMY_CAP_MAIN=6;
   var respawnAcc=0;
 
   var lastPlayerX=player.x, lastPlayerY=player.y;
 
   function fixedStep(){
     try{
+      // === STATUS TICK (solo MOB applicano; qui processiamo)
+      processStatuses(simStepMs);
+
       // Auto-chase + auto-attack
       if(autoChase && target){
         var still=enemies.indexOf(target)!==-1;
@@ -602,7 +616,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         }
       }
 
-      // Player path consume (consuma TUTTA la path col tempo, 1 nodo per tick)
+      // Player path consume
       if(pathQueue.length){
         var next=pathQueue.shift(), blocked=false;
         if(!walkable(next.x,next.y)) blocked=true;
@@ -615,7 +629,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       checkPortalAndTeleport(justEntered);
       lastPlayerX=player.x; lastPlayerY=player.y;
 
-      // Enemy AI
+      // Enemy AI (solo ranged)
       var now=performance.now();
       for(var j=0;j<enemies.length;j++){
         var e=enemies[j], distC=chebyshev(e,player);
@@ -630,27 +644,23 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         e.moveTick=(e.moveTick+1)%Math.max(1,Math.round(e.moveEvery/SETTINGS.speed));
         var canMove=(e.moveTick===0);
 
-        if(e.aggro){
-          if(e.type==='melee'){
-            if(canMove){ if(chebyshev(e,player)>1){ e.path=bfsToAdjacencySmart(e.x,e.y,player.x,player.y,'melee')||e.path||[]; } tryStepAlongPath(e); }
-            var near=(Math.abs(e.x-player.x)+Math.abs(e.y-player.y))<=1;
-            if(near && (now-e.lastHit)>=e.hitCd){ e.lastHit=now; var a=rndAtk(e.atkMin,e.atkMax,0.05,1.5); takePlayerDamage(a.dmg, a.isCrit?'CRIT -':'-'); }
-          } else {
-            var distM=Math.abs(e.x-player.x)+Math.abs(e.y-player.y);
-            var inRange=(distM>=e.rangeMin && distM<=e.rangeMax && (e.x===player.x || e.y===player.y));
-            if(inRange){
-              if(now-e.lastShot>=e.atkCd){ e.lastShot=now; var dx2=0,dy2=0; if(e.x===player.x) dy2=player.y>e.y?1:-1; else if(e.y===player.y) dx2=player.x>e.x?1:-1;
-                if(dx2||dy2) projectiles.push({x:e.x,y:e.y,dx:dx2,dy:dy2,spdTick:0,dmg:rndInt(6,10), vx:e.x, vy:e.y, vStart:0, vEnd:0}); }
-              if(distM<e.rangeMin && canMove){ var backX=e.x+(player.x<e.x?1:(player.x>e.x?-1:0)), backY=e.y+(player.y<e.y?1:(player.y>e.y?-1:0));
-                if(walkable(backX,backY) && !(backX===player.x&&backY===player.y)){ var fx=e.x,fy=e.y; e.x=backX; e.y=backY; startTween(e,fx,fy,e.x,e.y,performance.now()); } }
-              var adj=(Math.max(Math.abs(e.x-player.x),Math.abs(e.y-player.y))===1);
-              if(adj && (now-e.lastPoke)>=e.pokeCd){ e.lastPoke=now; var a2=rndAtk(4,7,0.05,1.5); takePlayerDamage(a2.dmg, a2.isCrit?'CRIT -':'-'); }
-            } else if(canMove){ var pth=bfsToAdjacencySmart(e.x,e.y,player.x,player.y,'ranged')||bfs(e.x,e.y,player.x,player.y); if(pth&&pth.length>2) pth.length=2; e.path=pth||e.path||[]; tryStepAlongPath(e); }
+        // RANGED ONLY
+        var distM=Math.abs(e.x-player.x)+Math.abs(e.y-player.y);
+        var inRange=(distM>=e.rangeMin && distM<=e.rangeMax && (e.x===player.x || e.y===player.y));
+        if(inRange){
+          if(now-e.lastShot>=e.atkCd){
+            e.lastShot=now;
+            var dx2=0,dy2=0; if(e.x===player.x) dy2=player.y>e.y?1:-1; else if(e.y===player.y) dx2=player.x>e.x?1:-1;
+            if(dx2||dy2) projectiles.push({x:e.x,y:e.y,dx:dx2,dy:dy2,spdTick:0,dmg:rndInt(6,10), vx:e.x, vy:e.y, vStart:0, vEnd:0, from:'archer'});
           }
-        } else {
-          if((e.x!==e.spawnX || e.y!==e.spawnY) && e.mode==='return'){ if(canMove){ if(!e.path||!e.path.length) e.path=bfs(e.x,e.y,e.spawnX,e.spawnY)||[]; tryStepAlongPath(e); } }
-          else { e.mode='idle'; if(canMove){ var anchor=(e.groupAnchor||{x:e.spawnX,y:e.spawnY}); var dest=findFreeNear(anchor.x,anchor.y,e.patrolRadius||2,10); e.path=bfs(e.x,e.y,dest.x,dest.y)||[]; tryStepAlongPath(e); } }
-        }
+          if(distM<e.rangeMin && canMove){ var backX=e.x+(player.x<e.x?1:(player.x>e.x?-1:0)), backY=e.y+(player.y<e.y?1:(player.y>e.y?-1:0));
+            if(walkable(backX,backY) && !(backX===player.x&&backY===player.y)){ var fx=e.x,fy=e.y; e.x=backX; e.y=backY; startTween(e,fx,fy,e.x,e.y,performance.now()); } }
+          var adj=(Math.max(Math.abs(e.x-player.x),Math.abs(e.y-player.y))===1);
+          if(adj && (now-e.lastPoke)>=e.pokeCd){ e.lastPoke=now; var a2=rndAtk(4,7,0.05,1.5); takePlayerDamage(a2.dmg, a2.isCrit?'CRIT -':'-');
+            // chance bleed anche sul poke ravvicinato
+            if(Math.random()<0.35) applyBleed(5000, 600, 2, 4);
+          }
+        } else if(canMove){ var pth=bfsToAdjacencySmart(e.x,e.y,player.x,player.y,'ranged')||bfs(e.x,e.y,player.x,player.y); if(pth&&pth.length>2) pth.length=2; e.path=pth||e.path||[]; tryStepAlongPath(e); }
       }
 
       // Proiettili
@@ -658,7 +668,12 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         var pr=projectiles[pi]; pr.spdTick=(pr.spdTick+1)%2; if(pr.spdTick!==0) continue;
         var nx=pr.x+pr.dx, ny=pr.y+pr.dy;
         if(!inside(nx,ny) || map[ny][nx]===1){ projectiles.splice(pi,1); continue; }
-        if(nx===player.x && ny===player.y){ var a3=rndAtk(pr.dmg,pr.dmg,0.05,1.5); takePlayerDamage(a3.dmg, a3.isCrit?'CRIT -':'-'); projectiles.splice(pi,1); continue; }
+        if(nx===player.x && ny===player.y){
+          var a3=rndAtk(pr.dmg,pr.dmg,0.05,1.5); takePlayerDamage(a3.dmg, a3.isCrit?'CRIT -':'-');
+          // BLEED: solo arciere
+          if(pr.from==='archer' && Math.random()<0.35) applyBleed(5000, 600, 2, 4);
+          projectiles.splice(pi,1); continue;
+        }
         startTween(pr,pr.x,pr.y,nx,ny,performance.now()); pr.x=nx; pr.y=ny;
       }
 
@@ -673,15 +688,14 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         if(SETTINGS.autoPickup && b.x===player.x && b.y===player.y){ var emptied=autoPickupCommons(b); if(emptied){ lootBags.splice(lb,1); } }
       }
 
-      // Respawn periodico su Main
+      // Respawn periodico su Main (arcieri)
       if(WORLD.current==='main'){
         respawnAcc += simStepMs;
         if(respawnAcc>=4000){ respawnAcc=0;
           if(enemies.length < ENEMY_CAP_MAIN){
-            // spawna 1-2 mob vicino all'angolo in basso a destra
             var spawnCount = (Math.random()<0.5)?1:2;
-            createPatrolGroup('melee', spawnCount, COLS-3, ROWS-3, 2);
-            logSys('Respawn nemici (+'+spawnCount+')');
+            createPatrolGroup('ranged', spawnCount, COLS-3, ROWS-3, 2);
+            logSys('Respawn arcieri (+'+spawnCount+')');
           }
         }
       }
@@ -689,11 +703,47 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     }catch(e){ panic('step', e); }
   }
 
-  /* Anim loop unificato: tween+draw e step fisso con accumulatore */
+  // ==== STATUS SYSTEM (solo player riceve da MOB) ====
+  function applyBleed(durationMs, tickMs, minD, maxD){
+    var now=performance.now();
+    player.status.bleed = {
+      until: now + (durationMs|0),
+      nextTick: now + (tickMs|0),
+      tickMs: (tickMs|0),
+      min: (minD|0), max: (maxD|0)
+    };
+    logSys('🩸 Bleed applicato per '+((durationMs|0)/1000).toFixed(1)+'s.');
+  }
+  function processStatuses(dtMs){
+    var now=performance.now();
+    var b=player.status.bleed;
+    if(b){
+      if(now >= b.nextTick){
+        b.nextTick += b.tickMs;
+        var dmg = rndInt(b.min, b.max);
+        // i tick non possono uccidere? (se vuoi cambiare, rimuovi Math.max)
+        player.hp = Math.max(1, player.hp - dmg);
+        addDmgText(player.x, player.y, '🩸 -'+dmg, '#ef4444');
+        logDmg('Bleed ti infligge '+dmg+' danni.');
+        triggerHitStop(60, 1.5);
+      }
+      if(now >= b.until || player.hp<=1){ player.status.bleed=null; logSys('🩸 Bleed finito.'); }
+    }
+  }
+
+  /* Anim loop unificato: tween+draw e step fisso con accumulatore + HIT-STOP */
+  var lastFrameTs=performance.now();
   function frame(ts){
-    var dt = ts - lastTs; lastTs = ts;
-    simAcc += dt;
-    while(simAcc >= simStepMs){ fixedStep(); simAcc -= simStepMs; }
+    var dt = ts - lastFrameTs; lastFrameTs = ts;
+
+    // HIT-STOP: durante l'effetto non avanziamo la simulazione, ma continuiamo a ridisegnare con shake
+    if(hitStopMs > 0){
+      hitStopMs -= dt;
+    }else{
+      simAcc += dt;
+      while(simAcc >= simStepMs){ fixedStep(); simAcc -= simStepMs; }
+    }
+
     updateTweens();
     updateDmgTexts(dt);
     draw();
@@ -703,7 +753,19 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 
   /* Draw */
   function draw(){
-    ctx.clearRect(0,0,cv.width,cv.height);
+    // micro-shake
+    var ox=0, oy=0;
+    if(shakeAmp>0){
+      ox = (Math.random()*2-1) * shakeAmp;
+      oy = (Math.random()*2-1) * shakeAmp;
+      // attenua gradualmente
+      shakeAmp *= 0.9; if(shakeAmp<0.2) shakeAmp=0;
+    }
+
+    ctx.save();
+    ctx.translate(ox, oy);
+
+    ctx.clearRect(-ox,-oy,cv.width,cv.height);
     var x,y;
     for(y=0;y<ROWS;y++) for(x=0;x<COLS;x++){
       ctx.fillStyle=(map[y][x]===1)?getVar('--block'):(((x+y)%2===0)?getVar('--tileA'):getVar('--tileB'));
@@ -733,9 +795,9 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       ctx.restore();
     }
 
-    // enemies
+    // enemies (archers)
     for(var eI=0;eI<enemies.length;eI++){
-      var en=enemies[eI], col=(en.type==='ranged')?'#a855f7':getVar('--enemy');
+      var en=enemies[eI], col='#a855f7';
       var ex=(en.vx!=null?en.vx:en.x), ey=(en.vy!=null?en.vy:en.y);
       drawActor(ex,ey,col);
       drawHpBar(ex,ey,en.hp,en.maxHp,true,(target===en));
@@ -746,6 +808,9 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     var pxv=(player.vx!=null?player.vx:player.x), pyv=(player.vy!=null?player.vy:player.y);
     drawActor(pxv,pyv,getVar('--player'));
     drawHpBar(pxv,pyv,player.hp,player.maxHp,false,false);
+
+    // status icons sopra il player
+    drawStatusIcons(pxv, pyv);
 
     // projectiles
     for(var pp=0; pp<projectiles.length; pp++){
@@ -758,8 +823,25 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     drawMiniOverlay();
     drawHud();
 
+    ctx.restore(); // fine shake translate
+
+    // overlay bleed leggero ai bordi
+    if(player.status.bleed){
+      var pulse = (Math.sin(now/180)+1)/2 * 0.12 + 0.06;
+      ctx.save(); ctx.globalAlpha=pulse; ctx.fillStyle='#7f1d1d'; ctx.fillRect(0,0,cv.width,cv.height); ctx.restore();
+    }
+
     ctx.fillStyle='#ffffffcc'; ctx.font='bold 14px system-ui'; ctx.fillText('BUILD '+BUILD, 8, cv.height-10);
     statusEl.textContent='LV '+player.lvl+' | HP '+player.hp+'/'+player.maxHp+' | ATK '+player.atkMin+'–'+player.atkMax+' | coins '+player.coins+' | pots '+player.pots;
+  }
+
+  function drawStatusIcons(tx,ty){
+    var x=tx*TILE+TILE/2, y=ty*TILE/2; // sopra la testa
+    var icons=[]; if(player.status.bleed) icons.push('🩸');
+    if(!icons.length) return;
+    ctx.save(); ctx.font='18px system-ui'; ctx.textAlign='center'; ctx.textBaseline='bottom';
+    for(var i=0;i<icons.length;i++){ ctx.fillText(icons[i], x + (i*18 - (icons.length-1)*9), y-36); }
+    ctx.restore();
   }
 
   function drawPortals(){
@@ -808,9 +890,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function gameOver(){ if(dead) return; dead=true; autoChase=false; pathQueue=[]; target=null; hideTargetFrame(); toast('Sei morto!'); cv.style.filter='grayscale(1)'; cv.style.opacity='0.6'; deathOverlay.classList.remove('hidden'); }
   deathRespawn.onclick=function(){
     var res=buildMap('spawn'); map=res.map; applyTheme(res.themeVars); WORLD.current='spawn';
-    worldInited.main=false; // così al ritorno in Main rigeneriamo
+    worldInited.main=false; // al ritorno in Main rigeneriamo gli arcieri
     player.hp=player.maxHp; player.x=1; player.y=Math.floor(ROWS/2); player.vx=player.x; player.vy=player.y;
     coins.length=0; potions.length=0; projectiles.length=0; enemies.length=0; lootBags.length=0;
+    player.status.bleed=null;
     dead=false; deathOverlay.classList.add('hidden'); cv.style.filter=''; cv.style.opacity=''; logSys('Respawn effettuato.');
   };
   deathReset.onclick=function(){ location.reload(); };
