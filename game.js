@@ -1,6 +1,6 @@
-/* ===== Drakoria — BUILD HUD-5 (split) ===== */
+/* ===== Drakoria — BUILD HUD-6 (mini round + fixes) ===== */
 (function(){
-  var BUILD='HUD-5';
+  var BUILD='HUD-6';
   var SAVE_KEY='save_xrq1_inv';
   var QUEST_KEY='quests_xrq1_inv';
 
@@ -14,7 +14,7 @@
     HUD.pot  = { x: cv.width - 166, y: cv.height - 86, w: 72, h: 72 }; // 🍵
     HUD.loot = { x: 14,             y: cv.height - 86, w: 72, h: 72 }; // 👜
   }
-  window.addEventListener('resize', layoutHud, false);
+  window.addEventListener('resize', () => { layoutHud(); }, false);
   layoutHud();
 
   var statusEl=document.getElementById('status');
@@ -22,7 +22,7 @@
   var btnSave=document.getElementById('btnSave'), btnLoad=document.getElementById('btnLoad'), btnReset=document.getElementById('btnReset');
   var btnQuest=document.getElementById('btnQuest'), btnQuestClose=document.getElementById('btnQuestClose');
   var questPanel=document.getElementById('questPanel'), questBody=document.getElementById('questBody');
-  var btnMini=document.getElementById('btnMini'), miniWrap=document.getElementById('miniWrap'), mini=document.getElementById('mini'), miniCtx=mini.getContext('2d');
+  // RIMOSSI: btnMini/miniWrap/mini canvas
   var btnInventory=document.getElementById('btnInventory'), invWin=document.getElementById('invWin'), invClose=document.getElementById('invClose');
   var invTabs=document.getElementById('invTabs'), invGrid=document.getElementById('invGrid');
   var eqWeaponName=document.getElementById('eqWeaponName'), eqArmorName=document.getElementById('eqArmorName');
@@ -36,12 +36,13 @@
   var btnLoot = document.getElementById('btnLoot');
   var btnLog=document.getElementById('btnLog'), logPanel=document.getElementById('logPanel'), logBody=document.getElementById('logBody'), btnLogClose=document.getElementById('btnLogClose');
 
-  // === GAME OVER OVERLAY (agganci sicuri anche se l'HTML sta a fine <body>) ===
-  var deathOverlay=null, deathLoad=null, deathReset=null;
+  // === GAME OVER OVERLAY (con Respawn) ===
+  var deathOverlay=null, deathLoad=null, deathReset=null, deathRespawn=null;
   function wireDeathOverlay(){
     deathOverlay = document.getElementById('deathOverlay');
     deathLoad    = document.getElementById('deathLoad');
     deathReset   = document.getElementById('deathReset');
+    deathRespawn = document.getElementById('deathRespawn');
 
     if (deathLoad && !deathLoad.__wired){
       deathLoad.addEventListener('click', function(){ btnLoad.click(); }, false);
@@ -50,6 +51,10 @@
     if (deathReset && !deathReset.__wired){
       deathReset.addEventListener('click', function(){ btnReset.click(); }, false);
       deathReset.__wired = true;
+    }
+    if (deathRespawn && !deathRespawn.__wired){
+      deathRespawn.addEventListener('click', doRespawn, false);
+      deathRespawn.__wired = true;
     }
   }
   wireDeathOverlay();
@@ -222,7 +227,7 @@ function applyItem(it){
     var currentTab='Tutto';
     var hotbar=[null, {kind:'potion', icon:'🍵'}, null, null, null, null];
 
-    // Abilità (collezionabili)
+    // Abilità
     var abilities = [
       { id:'arc_wave', name:'Ondata Arcana', icon:'✨', desc:'Colpisce ad area le 8 caselle adiacenti. Cast 1.5s, CD 6s.', castMs:1500, cdMs:6000,
         use: function(){ castAbility(this, aoeArcWave); } }
@@ -382,22 +387,18 @@ function applyItem(it){
       teleportGuardUntil = performance.now() + 450;
 
       logSys('Teletrasporto: ' + (WORLD.current==='spawn'?'Spawn':'Main'));
-      draw(); drawMini();
+      draw();
     }
 
     // OGGETTI + PROIETTILI
     var coins=[], potions=[], projectiles=[];
 
-    // inizializza la mappa iniziale (lasciamo spawn vuoto, come nel tuo design)
+    // inizializza la mappa iniziale (spawn vuoto by design)
     var initRes = buildMap('spawn');
     map = initRes.map;
     applyTheme(initRes.themeVars);
     WORLD.current = 'spawn';
     enemies.length = 0;
-    if (WORLD.current === 'main') {
-      for (var i1=0;i1<4;i1++) coins.push(randEmpty());
-      for (var i2=0;i2<1;i2++) potions.push(randEmpty());
-    }
 
     // TARGET LOCK + AUTO-CHASE
     var target=null, autoChase=false, lastEnemyTapTs=0, lastEnemyTapId=-1;
@@ -463,26 +464,11 @@ function applyItem(it){
 
     // UTILS
     function inside(x,y){ return x>=0&&y>=0&&x<COLS&&y<ROWS; }
-
-    // FIX: manhattan corretto
-    function manhattan(a,b){ return Math.abs(a.x - b.x) + Math.abs(a.y - b.y); }
-
-    function randEmpty(){
-      for (var tries=0; tries<200; tries++){
-        var x = rndInt(0, COLS-1), y = rndInt(0, ROWS-1);
-        if (walkable(x,y) && tileFree(x,y)) return {x:x,y:y};
-      }
-      return {x:1, y:1};
-    }
-    function walkable(x,y){
-      if (!inside(x,y)) return false;
-      if (map[y][x]!==0) return false;
-      return true; // i portali sono camminabili
-    }
-    function chebyshev(a,b){ var dx=Math.abs(a.x-b.x), dy=Math.abs(a.y-b.y); return dx>dy?dx:dy; }
+    function manhattan(a,b){ return Math.abs(a.x - b.x) + Math.abs(a.y - b.y); } // fix refuso
     function rndInt(a,b){ return a+((Math.random()*(b-a+1))|0); }
+    function chebyshev(a,b){ var dx=Math.abs(a.x-b.x), dy=Math.abs(a.y-b.y); return dx>dy?dx:dy; }
+    function rollCrit(chance){ return Math.random() < (chance||0); }
 
-    // FIX: getVar con fallback locali (se CSS non carica)
     function getVar(n){
       var cs = window.getComputedStyle(document.documentElement);
       var v = cs.getPropertyValue(n).trim();
@@ -491,11 +477,14 @@ function applyItem(it){
         '--tileA':'#0e2a1e','--tileB':'#123022','--block':'#15223b',
         '--player':'#3b82f6','--enemy':'#ef4444','--coin':'#facc15',
         '--shadow':'#0006','--hpBack':'#1f2937'
-      };
-      return F[n] || '#000';
+      }; return F[n] || '#000';
     }
 
-    function rollCrit(chance){ return Math.random() < (chance||0); }
+    function walkable(x,y){
+      if (!inside(x,y)) return false;
+      if (map[y][x]!==0) return false;
+      return true; // i portali sono camminabili
+    }
     function tileFree(x,y){
       if(map[y][x]!==0) return false;
       if(x===player.x && y===player.y) return false;
@@ -599,10 +588,7 @@ function applyItem(it){
           attackEnemy(target); return;
         }
 
-        updateDmgTexts();
-        draw();
         drawAtkCooldown();
-        drawMini();
         updateTargetFrame();
         updateDpsPanel();
 
@@ -621,27 +607,6 @@ function applyItem(it){
     btnAttack.addEventListener('touchend', function(e){ e.preventDefault(); tryAttackAdjacent(); }, false);
     window.addEventListener('keydown', function(e){ if(e.code==='Space'||e.key===' ') tryAttackAdjacent(); if(e.key==='e'||e.key==='E') usePotion(); }, false);
 
-    // Hotbar actions
-    function activateSlot(n){
-      var b=hotbar[n]; if(!b) return;
-      if(b.kind==='potion'){ usePotion(); return; }
-      if(b.kind==='item'){ useHotbarItem(b); return; }
-    }
-    document.getElementById('slot1').addEventListener('click', function(){ activateSlot(1); }, false);
-    document.getElementById('slot2').addEventListener('click', function(){ activateSlot(2); }, false);
-    document.getElementById('slot3').addEventListener('click', function(){ activateSlot(3); }, false);
-    document.getElementById('slot4').addEventListener('click', function(){ activateSlot(4); }, false);
-    document.getElementById('slot5').addEventListener('click', function(){ activateSlot(5); }, false);
-
-    btnUsePotion.addEventListener('click', usePotion, false);
-    btnUsePotion.addEventListener('touchend', function(e){ e.preventDefault(); usePotion(); }, false);
-
-    // Mini
-    btnMini.addEventListener('click', function(){
-      if(miniWrap.classList.contains('hidden')) miniWrap.classList.remove('hidden'); else miniWrap.classList.add('hidden');
-      drawMini();
-    }, false);
-
     // Inventario
     btnInventory.onclick = function(){ invWin.classList.toggle('hidden'); renderTabs(); renderInventory(); };
     invClose.onclick = function(){ invWin.classList.add('hidden'); };
@@ -658,7 +623,7 @@ function applyItem(it){
 
     // COMBAT
     function addDmgText(tx,ty,txt,color){ var px=tx*TILE+TILE/2, py=ty*TILE+TILE/2-28; dmgTexts.push({x:px,y:py,txt:txt,color:color,ttl:700,vy:-0.04}); }
-    function updateDmgTexts(){ var dt=120; for(var i=dmgTexts.length-1;i>=0;i--){ var d=dmgTexts[i]; d.ttl-=dt; d.y+=d.vy*dt; if(d.ttl<=0) dmgTexts.splice(i,1); } }
+    function updateDmgTexts(dt){ for(var i=dmgTexts.length-1;i>=0;i--){ var d=dmgTexts[i]; d.ttl-=dt; d.y+=d.vy*dt; if(d.ttl<=0) dmgTexts.splice(i,1); } }
     function drawDmgTexts(){ for(var i=0;i<dmgTexts.length;i++){ var d=dmgTexts[i]; var a=Math.max(0,Math.min(1,d.ttl/700)); ctx.save(); ctx.globalAlpha=a; ctx.fillStyle=d.color; ctx.font='bold 16px system-ui'; ctx.textAlign='center'; ctx.fillText(d.txt,d.x,d.y); ctx.restore(); } }
 
     function recordDPS(amount){
@@ -697,7 +662,6 @@ function applyItem(it){
         enemies.splice(enemies.indexOf(t),1);
         var s=randEmpty(); enemies.push(t.type==='ranged' ? makeArcher(s.x,s.y) : makeSlime(s.x,s.y));
       }
-      draw(); drawMini();
     }
 
     function takePlayerDamage(amount, label){
@@ -722,10 +686,33 @@ function applyItem(it){
       }
     }
 
+    function doRespawn(){
+      // rinasci allo spawn con vita piena
+      var res = buildMap('spawn');
+      map = res.map;
+      applyTheme(res.themeVars);
+      WORLD.current = 'spawn';
+
+      player.x = Math.max(1, COLS-3); // vicino al portale verso main
+      player.y = Math.floor(ROWS/2);
+      player.vx = player.x; player.vy = player.y;
+      recomputeStats(true); // HP = max
+
+      target=null; autoChase=false; pathQueue=[];
+      coins.length=0; potions.length=0; projectiles.length=0; enemies.length=0;
+      dmgTexts.length=0;
+
+      dead=false;
+      cv.style.filter=''; cv.style.opacity=''; cv.style.pointerEvents='auto';
+      if (deathOverlay && deathOverlay.classList) deathOverlay.classList.add('hidden');
+
+      toast('Respawn eseguito.');
+    }
+
     function usePotion(){
       if(player.pots<=0||player.hp>=player.maxHp) return;
       player.pots--; var heal=35; player.hp=Math.min(player.maxHp,player.hp+heal);
-      flashScreen('#8b5cf6'); updateHotbarCounts(); draw();
+      flashScreen('#8b5cf6'); updateHotbarCounts();
       logHeal('Pozione: +' + heal + ' HP.');
     }
     function useHotbarItem(binding){
@@ -736,7 +723,7 @@ function applyItem(it){
             var healed = 0;
             if(it.heal){ var before=player.hp; player.hp=Math.min(player.maxHp, player.hp+it.heal); healed = player.hp-before; if(healed>0){ logHeal('Consumabile: +'+healed+' HP.'); flashScreen('#8b5cf6'); } }
             if(typeof it.qty==='number'){ it.qty--; if(it.qty<=0){ inventory.splice(i,1); clearHotbarIfMissing(binding.itemId); } }
-            draw(); renderInventoryIfOpen(); return;
+            renderInventoryIfOpen(); return;
           }
         }
       }
@@ -810,7 +797,7 @@ function applyItem(it){
       }else{
         renderLoot(bag);
       }
-      draw(); drawMini(); updateHotbarCounts();
+      updateHotbarCounts();
     }
     function openLootIfOnBag(){
       var bag = getBagAt(player.x, player.y);
@@ -835,7 +822,7 @@ function applyItem(it){
         if(emptied){ lootBags.splice(lootBags.indexOf(bag),1); btnLoot.style.display='none'; }
         else{ renderLoot(bag); lootWin.classList.remove('hidden'); }
 
-        updateHotbarCounts(); draw(); drawMini();
+        updateHotbarCounts();
         if(coinsGained||potsGained){
           toast('Raccolto: '+(coinsGained?('🪙 x'+coinsGained+' '):'')+(potsGained?('🍵 x'+potsGained):''));
           if(coinsGained) logLoot('Monete +'+coinsGained);
@@ -860,7 +847,7 @@ function applyItem(it){
       lootBags.splice(lootBags.indexOf(bag),1);
       lootWin.classList.add('hidden');
       btnLoot.style.display='none';
-      updateHotbarCounts(); draw(); drawMini();
+      updateHotbarCounts();
     }, false);
     function autoPickupCommons(bag){
       var keep=[], coinsGained=0, potsGained=0;
@@ -940,7 +927,7 @@ function applyItem(it){
         }
       }
       if(total>0){ recordDPS(total); logDmg('Ondata Arcana colpisce '+hits+' nemici per '+total+' danni totali.'); }
-      draw(); drawMini(); updateTargetFrame();
+      updateTargetFrame();
     }
 
     // SAVE/LOAD/RESET
@@ -1013,12 +1000,9 @@ function applyItem(it){
 
       renderQuest();
       updateHotbarCounts();
-      draw();
-      drawMini();
       if (typeof renderInventoryIfOpen === 'function') renderInventoryIfOpen();
       updateTargetFrame();
       updateDpsPanel();
-      renderAbilities();
 
       dead = false;
       cv.style.filter = '';
@@ -1143,11 +1127,36 @@ function applyItem(it){
               }
             }
           } else {
-            if((e.x!==e.spawnX || e.y!==e.spawnY)){
-              if(canMove){
-                if(!e.path || !e.path.length) e.path = bfs(e.x,e.y,e.spawnX,e.spawnY) || [];
-                tryStepAlongPath(e);
+            // --- NOVITÀ: pattugliamento/idle-wander ---
+            if(canMove){
+              // probabilità di muoversi anche senza il player
+              var wanderChance = 0.25; // 25% ad ogni tick di movimento
+              if(Math.random() < wanderChance){
+                var dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+                // tienili entro 4 tiles dallo spawn
+                var candidates=[];
+                for(var d=0; d<4; d++){
+                  var nx=e.x+dirs[d][0], ny=e.y+dirs[d][1];
+                  if(!walkable(nx,ny)) continue;
+                  if(nx===player.x && ny===player.y) continue;
+                  if(chebyshev({x:e.spawnX,y:e.spawnY},{x:nx,y:ny})<=4){
+                    // evita collisione con altri nemici
+                    var occ=false; for(var kk=0; kk<enemies.length; kk++){ var o=enemies[kk]; if(o!==e && o.x===nx && o.y===ny){ occ=true; break; } }
+                    if(!occ) candidates.push({x:nx,y:ny});
+                  }
+                }
+                if(candidates.length){
+                  var pick = candidates[(Math.random()*candidates.length)|0];
+                  var fx=e.x, fy=e.y; e.x=pick.x; e.y=pick.y;
+                  startTween(e, fx, fy, e.x, e.y, performance.now());
+                }
               }
+            }
+
+            // ritorno allo spawn (se allontanati)
+            if((e.x!==e.spawnX || e.y!==e.spawnY) && canMove){
+              if(!e.path || !e.path.length) e.path = bfs(e.x,e.y,e.spawnX,e.spawnY) || [];
+              tryStepAlongPath(e);
             } else {
               e.mode='idle'; e.path=[];
             }
@@ -1197,19 +1206,22 @@ function applyItem(it){
       startTween(e, fx, fy, e.x, e.y, performance.now());
     }
 
-    layoutHud();
+    // TICK fisso per AI/gioco
     setInterval(step,120);
-    draw(); drawAtkCooldown(); drawMini(); updateHotbarCounts(); updateTargetFrame(); updateDpsPanel(); renderAbilities();
 
-    // Render loop 60fps tween
+    // Render loop 60fps con delta time
+    var lastAnim = performance.now();
     (function animLoop(){
+      var now = performance.now();
+      var dt = now - lastAnim; lastAnim = now;
       updateTweens();
+      updateDmgTexts(dt);      // <-- i danni adesso scompaiono sempre
       draw();
       drawAtkCooldown();
       requestAnimationFrame(animLoop);
     })();
 
-    // DRAW
+    // === DRAW ===
     function draw(){
       ctx.clearRect(0,0,cv.width,cv.height);
       var x,y;
@@ -1219,9 +1231,11 @@ function applyItem(it){
       }
       drawPortals(ctx, TILE);
 
+      // coins
       ctx.fillStyle=getVar('--coin');
-      for(var i=0;i<coins.length;i++){ var c=coins[i]; var cx=c.x*TILE+TILE/2, cy=c.y*TILE+TILE/2; ctx.beginPath(); ctx.arc(cx,cy,10,0,Math.PI*2); ctx.fill(); }
+      for(var i=0;i<coins.length;i++){ var c=coins[i]; var cx2=c.x*TILE+TILE/2, cy2=c.y*TILE+TILE/2; ctx.beginPath(); ctx.arc(cx2,cy2,10,0,Math.PI*2); ctx.fill(); }
 
+      // potions
       for(var k=0;k<potions.length;k++){ var po=potions[k]; var px=po.x*TILE, py=po.y*TILE;
         ctx.fillStyle='#8b5cf6'; ctx.fillRect(px+TILE/2-8,py+TILE/2-14,16,20);
         ctx.fillStyle='#a78bfa'; ctx.fillRect(px+TILE/2-5,py+TILE/2-20,10,6);
@@ -1229,6 +1243,7 @@ function applyItem(it){
         ctx.fillStyle='#0006'; ctx.beginPath(); ctx.ellipse(px+TILE/2,py+TILE-12,12,4,0,0,Math.PI*2); ctx.fill();
       }
 
+      // loot bags
       var now=performance.now();
       for(var lb=0; lb<lootBags.length; lb++){
         var b=lootBags[lb], bx=b.x*TILE, by=b.y*TILE;
@@ -1244,6 +1259,7 @@ function applyItem(it){
         ctx.restore();
       }
 
+      // enemies
       for(var eI=0;eI<enemies.length;eI++){
         var en=enemies[eI];
         var col = (en.type==='ranged') ? '#a855f7' : getVar('--enemy');
@@ -1253,10 +1269,12 @@ function applyItem(it){
         if(target===en){ drawTargetRing(ex,ey); }
       }
 
+      // player
       var pxv = (player.vx!=null?player.vx:player.x), pyv=(player.vy!=null?player.vy:player.y);
       drawActor(pxv,pyv,getVar('--player'));
       drawHpBar(pxv,pyv,player.hp,player.maxHp,false,false);
 
+      // projectiles
       for(var pp=0; pp<projectiles.length; pp++){
         var pr=projectiles[pp];
         var ptx = (pr.vx!=null?pr.vx:pr.x), pty=(pr.vy!=null?pr.vy:pr.y);
@@ -1265,6 +1283,8 @@ function applyItem(it){
 
       drawDmgTexts();
       drawXpBar();
+      drawMiniCircle(); // <- mini-mappa rotonda, sempre visibile
+
       statusEl.textContent = 'build: '+BUILD+' | LV '+player.lvl+' | HP '+player.hp+'/'+player.maxHp+' | ATK '+player.atkMin+'–'+player.atkMax+' | coins '+player.coins+' | pots '+player.pots+' | crit '+Math.round(player.critChance*100)+'%';
       ctx.fillStyle='#ffffffcc'; ctx.font='bold 14px system-ui'; ctx.fillText('BUILD '+BUILD, 8, 24);
 
@@ -1323,6 +1343,70 @@ function applyItem(it){
       ctx.fillStyle='#e5e7eb'; ctx.font='12px system-ui'; ctx.textAlign='left'; ctx.textBaseline='top';
       ctx.fillText('LV '+player.lvl+(player.lvl<MAX_LVL?(' — '+Math.floor(ratio*100)+'%'):' — MAX'), x, y+h+2);
     }
+
+    // === MINI MAP ROUND ===
+    function drawMiniCircle(){
+      var R = 70;                    // raggio della mini-mappa
+      var pad = 12;
+      var cx = cv.width - (R + pad); // in alto a destra
+      var cy = R + pad;
+
+      // bordo
+      ctx.save();
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
+      ctx.fillStyle='rgba(15,23,42,.7)'; ctx.fill();
+      ctx.lineWidth=2; ctx.strokeStyle='#1f2a44'; ctx.stroke();
+
+      // clip rotondo
+      ctx.beginPath(); ctx.arc(cx, cy, R-4, 0, Math.PI*2); ctx.clip();
+
+      // area utile
+      var size = (R-8)*2;
+      var cellW = size / COLS;
+      var cellH = size / ROWS;
+      var ox = cx - size/2;
+      var oy = cy - size/2;
+
+      // tiles
+      for(var y=0;y<ROWS;y++){
+        for(var x=0;x<COLS;x++){
+          ctx.fillStyle = (map[y][x]===1)?'#2b3b66':'#164e24';
+          ctx.fillRect(ox + x*cellW, oy + y*cellH, cellW+0.5, cellH+0.5);
+        }
+      }
+
+      // loot
+      ctx.fillStyle='#f59e0b';
+      for(var lb=0; lb<lootBags.length; lb++){
+        var b=lootBags[lb];
+        ctx.fillRect(ox + b.x*cellW+1, oy + b.y*cellH+1, 3,3);
+      }
+
+      // coins / potions
+      ctx.fillStyle='#facc15';
+      for(var i=0;i<coins.length;i++){ var c=coins[i]; ctx.fillRect(ox + c.x*cellW+1, oy + c.y*cellH+1, 2,2); }
+      ctx.fillStyle='#a78bfa';
+      for(var p=0;p<potions.length;p++){ var po=potions[p]; ctx.fillRect(ox + po.x*cellW+1, oy + po.y*cellH+1, 2,2); }
+
+      // enemies
+      for(var eI=0;eI<enemies.length;eI++){
+        var en=enemies[eI]; ctx.fillStyle=(en.type==='ranged')?'#a855f7':'#ef4444';
+        ctx.fillRect(ox + en.x*cellW+1, oy + en.y*cellH+1, 3,3);
+      }
+
+      // player
+      ctx.fillStyle='#3b82f6';
+      ctx.fillRect(ox + player.x*cellW+1, oy + player.y*cellH+1, 3,3);
+
+      ctx.restore();
+
+      // indicatore Nord
+      ctx.save();
+      ctx.fillStyle='#e5e7eb'; ctx.font='10px system-ui'; ctx.textAlign='center';
+      ctx.fillText('N', cx, cy - R + 10);
+      ctx.restore();
+    }
+
     function flashScreen(color){ ctx.save(); ctx.globalAlpha=.20; ctx.fillStyle=color; ctx.fillRect(0,0,cv.width,cv.height); ctx.restore(); }
     function flashCircle(tx,ty,color,alpha,r){ var x=tx*TILE+TILE/2,y=ty*TILE+TILE/2; ctx.save(); ctx.globalAlpha=alpha; ctx.fillStyle=color; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); ctx.restore(); }
     function drawAtkCooldown(){
@@ -1333,25 +1417,6 @@ function applyItem(it){
       c.globalAlpha=0.15; c.fillStyle='#000'; c.beginPath(); c.arc(cx,cy,r,0,Math.PI*2); c.fill();
       c.globalAlpha=0.85; c.strokeStyle= remain>0 ? '#94a3b8' : '#22c55e'; c.lineWidth=4; c.beginPath();
       c.arc(cx,cy,r-2,-Math.PI/2, -Math.PI/2 + ratio*2*Math.PI); c.stroke();
-    }
-    function drawMini(){
-      if (miniWrap.classList.contains('hidden') || !miniCtx) return;
-      miniCtx.clearRect(0,0,mini.width,mini.height);
-      var x,y;
-      for(y=0;y<ROWS;y++) for(x=0;x<COLS;x++){
-        miniCtx.fillStyle = (map[y][x]===1)?'#2b3b66':'#164e24';
-        miniCtx.fillRect(x*(mini.width/COLS), y*(mini.height/ROWS), (mini.width/COLS), (mini.height/ROWS));
-      }
-      miniCtx.fillStyle='#f59e0b';
-      for(var lb=0; lb<lootBags.length; lb++){ var b=lootBags[lb];
-        miniCtx.fillRect(b.x*(mini.width/COLS)+1, b.y*(mini.height/ROWS)+1, 3,3);
-      }
-      miniCtx.fillStyle='#facc15'; for(var i=0;i<coins.length;i++){ var c=coins[i]; miniCtx.fillRect(c.x*(mini.width/COLS)+1, c.y*(mini.height/ROWS)+1, 2,2); }
-      miniCtx.fillStyle='#a78bfa'; for(var p=0;p<potions.length;p++){ var po=potions[p]; miniCtx.fillRect(po.x*(mini.width/COLS)+1, po.y*(mini.height/ROWS)+1, 2,2); }
-      for(var eI=0;eI<enemies.length;eI++){ var en=enemies[eI]; miniCtx.fillStyle=(en.type==='ranged')?'#a855f7':'#ef4444';
-        miniCtx.fillRect(en.x*(mini.width/COLS)+1, en.y*(mini.height/ROWS)+1, 3,3); }
-      miniCtx.fillStyle='#3b82f6'; miniCtx.fillRect(player.x*(mini.width/COLS)+1, player.y*(mini.height/ROWS)+1, 3,3);
-      miniCtx.strokeStyle='#1f2a44'; miniCtx.strokeRect(0.5,0.5, mini.width-1, mini.height-1);
     }
 
     function updateHotbarCounts(){ potCntEl.textContent = String(player.pots||0); }
@@ -1373,12 +1438,6 @@ function applyItem(it){
       tfHpTxt.textContent = 'HP '+target.hp+' / '+target.maxHp+' ('+Math.round(ratio*100)+'%)';
     }
     function hideTargetFrame(){ tframe.style.display='none'; }
-    function updateDpsPanel(){
-      var now=performance.now(), cutoff=now-10000, sum=0;
-      for(var i=0;i<dpsEvents.length;i++) if(dpsEvents[i].t>=cutoff) sum+=dpsEvents[i].a;
-      var dps=Math.round(sum/10); if(dps>dpsPeak) dpsPeak=dps;
-      dpsText.textContent = dps + ' (picco ' + dpsPeak + ')';
-    }
 
     // Combat Log
     var logLines=[];
