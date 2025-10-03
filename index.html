@@ -3,20 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Drakoria — Stats Build</title>
+<title>Drakoria — Stats+Fix (One File)</title>
 <style>
 :root{
   --bg:#0b1224; --panel:#0f172a; --stroke:#1f2a44; --text:#e5e7eb; --muted:#9ca3af;
   --tileA:#0e2a1e; --tileB:#123022; --block:#15223b;
-  --player:#3b82f6; --enemy:#ef4444; --coin:#facc15; --shadow:#0006; --hpBack:#1f2937;
-  --accent:#7c3aed; --rare:#60a5fa; --epic:#a78bfa; --legend:#f59e0b;
+  --player:#3b82f6; --enemy:#ef4444; --shadow:#0006; --hpBack:#1f2937;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto}
 header{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--panel);border-bottom:1px solid var(--stroke)}
 header .muted{color:var(--muted);margin-left:8px}
 header .btn{background:#26325a;color:#fff;border:1px solid #31406e;border-radius:8px;padding:6px 10px;cursor:pointer}
-header .btn:hover{filter:brightness(1.05)}
 main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);border:1px solid var(--stroke);border-radius:12px;position:relative}
 #game{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--stroke);background:#0a1630;image-rendering:pixelated;touch-action:none}
 .help{margin:.6rem 0 0;color:#a1a1aa}
@@ -31,7 +29,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 .log .line{margin:2px 0}
 .log .dmg{color:#fca5a5}
 .log .heal{color:#86efac}
-.log .loot{color:#fde68a}
 .log .sys{color:#93c5fd}
 
 /* Game Over */
@@ -62,7 +59,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 </head>
 <body>
 <header>
-  <div><strong>Drakoria</strong> <span class="muted">stats build</span></div>
+  <div><strong>Drakoria</strong> <span class="muted">stats+fix</span></div>
   <div>
     <button id="btnChar" class="btn">Personaggio</button>
     <button id="btnSave" class="btn">Save</button>
@@ -75,7 +72,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   <canvas id="game" width="1344" height="768" aria-label="Gioco"></canvas>
   <p class="help">
     Tap per muoverti • tap su un nemico per target • doppio tap/press prolungato per auto-inseguire • SPAZIO/🗡️ attacca.  
-    Portale viola tra Spawn ↔ Main (arcieri). Pannello <b>Personaggio</b> per le nuove statistiche.
+    Portale viola tra Spawn ↔ Main. Pannello <b>Personaggio</b> per le statistiche & XP.
   </p>
   <div id="status"></div>
 </main>
@@ -107,8 +104,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 
 <script>
 (function(){
-  const BUILD='STATS-1';
-  const SAVE_KEY='save_stats_build';
+  const BUILD='STATS-2';
+  const SAVE_KEY='save_stats_build2';
   const cv=document.getElementById('game'); const ctx=cv.getContext('2d');
 
   /* UI */
@@ -151,7 +148,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   const THEMES={ main:{'--tileA':'#0e2a1e','--tileB':'#123022'}, spawn:{'--tileA':'#1e1f3a','--tileB':'#23264a'} };
   let map=[];
   function makePortals(){ const mid=ROWS>>1; return { main:[{x:1,y:mid,to:'spawn',tx:COLS-2,ty:mid}], spawn:[{x:COLS-2,y:mid,to:'main',tx:1,ty:mid}] }; }
-  function isPortalTile(world,x,y){ const list=WORLD.portals[world]||[]; for(let i=0;i<list.length;i++){ const p=list[i]; if(p.x===x&&p.y===y) return true; } return false; }
+  function isPortalTile(world,x,y){ const l=WORLD.portals[world]||[]; for(let i=0;i<l.length;i++){ const p=l[i]; if(p.x===x&&p.y===y) return true; } return false; }
   function applyTheme(vars){ const root=document.documentElement.style; for(const k in vars) root.setProperty(k, vars[k]); }
   function buildMap(name){
     const m=[]; for(let y=0;y<ROWS;y++){ const row=[]; for(let x=0;x<COLS;x++) row.push(0); m.push(row); }
@@ -166,6 +163,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function tileFree(x,y){ if(map[y][x]!==0) return false; if(x===player.x&&y===player.y) return false; for(let i=0;i<enemies.length;i++){ const e=enemies[i]; if(e.x===x&&e.y===y) return false; } return true; }
   function chebyshev(a,b){ const dx=Math.abs(a.x-b.x), dy=Math.abs(a.y-b.y); return dx>dy?dx:dy; }
   function randEmpty(){ for(let t=0;t<200;t++){ const x=rndInt(0,COLS-1), y=rndInt(0,ROWS-1); if(walkable(x,y)&&tileFree(x,y)) return {x,y}; } return {x:1,y:1}; }
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
   function getVar(n){ const cs=getComputedStyle(document.documentElement); return cs.getPropertyValue(n).trim(); }
 
   /* BFS pathfinding */
@@ -215,30 +213,59 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     maxHp:100, hp:100, atkMin:6, atkMax:12,
     baseCrit:0.10, // 10% base
     coins:0,pots:1,lastAtk:0,atkCd:450,lvl:1,exp:0,
-    // --- nuove stats ---
     stats:{
-      atkSpeed: 0.00,   // +% velocità attacco
-      critDmg: 0.50,    // +50% (di default)
+      atkSpeed: 0.00,   // +% velocità attacco (cap 0.50)
+      critDmg: 0.50,    // +50% default
       luck:    0.00,    // +% crit chance
       defense: 0,       // flat
       mitigation: 0.00, // % (cap 0.60)
-      projRes: 0.00,    // % vs proiettili
-      bleedRes:0.00     // % vs bleed (cap 0.70)
+      projRes: 0.00,    // % (cap 0.60)
+      bleedRes:0.00     // % (cap 0.70)
     },
     status:{ bleed:null }
   };
-  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
   function getCritChance(){ return clamp(player.baseCrit + (player.stats.luck||0), 0, 0.90); }
-  function getAtkCd(){ // effettivo con atkSpeed
-    const eff = player.atkCd * (1 - (player.stats.atkSpeed||0));
-    return Math.max(180, Math.floor(eff));
-  }
+  function getAtkCd(){ const eff = player.atkCd * (1 - clamp(player.stats.atkSpeed||0,0,0.50)); return Math.max(180, Math.floor(eff)); }
   function recomputeStats(heal){
-    player.maxHp = player.baseMaxHp;
-    player.atkMin = player.baseAtkMin;
-    player.atkMax = player.baseAtkMax;
+    player.maxHp = Math.round(player.baseMaxHp);
+    player.atkMin = Math.round(player.baseAtkMin);
+    player.atkMax = Math.round(player.baseAtkMax);
     if(heal) player.hp = player.maxHp;
     if(player.hp>player.maxHp) player.hp=player.maxHp;
+    renderCharIfOpen();
+  }
+
+  /* Progressione */
+  const MAX_LVL=99;
+  function xpNeeded(l){ return Math.floor(50 * Math.pow(l, 1.5)); }
+  function levelUp(){
+    player.lvl = Math.min(MAX_LVL, player.lvl+1);
+    // Per livello (piccoli)
+    player.baseMaxHp += 2;
+    player.baseAtkMin += 0.2;
+    player.baseAtkMax += 0.3;
+    // Ogni 5 livelli (piccoli buff difensivi/offensivi)
+    if(player.lvl % 5 === 0){
+      player.stats.defense += 1;
+      player.stats.mitigation = clamp((player.stats.mitigation||0) + 0.01, 0, 0.60);
+      player.stats.atkSpeed   = clamp((player.stats.atkSpeed  ||0) + 0.01, 0, 0.50);
+      player.stats.projRes    = clamp((player.stats.projRes   ||0) + 0.01, 0, 0.60);
+      player.stats.bleedRes   = clamp((player.stats.bleedRes  ||0) + 0.01, 0, 0.70);
+      player.stats.luck       = clamp((player.stats.luck      ||0) + 0.005, 0, 0.50);
+    }
+    // heal 10% alla salita
+    player.hp = Math.min(player.maxHp, player.hp + Math.round(player.maxHp * 0.10));
+    recomputeStats(false);
+    toast('Level up! LV '+player.lvl);
+    logSys('Level up → LV '+player.lvl);
+  }
+  function gainXP(n){
+    if(player.lvl>=MAX_LVL) return;
+    player.exp += n;
+    while(player.lvl<MAX_LVL && player.exp >= xpNeeded(player.lvl)){
+      player.exp -= xpNeeded(player.lvl);
+      levelUp();
+    }
     renderCharIfOpen();
   }
 
@@ -254,19 +281,19 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     };
     e.vx=x; e.vy=y; return giveId(e);
   }
-  function spawnMain(){
-    enemies.length=0;
-    // 2 gruppi pattuglia leggeri
-    createPatrolGroup(4, 5, COLS-4, 3, 2);
-    createPatrolGroup(4, 5, COLS-5, ROWS-4, 2);
-  }
-  let _grpId=1;
   function createPatrolGroup(count, anchorX, anchorY, radius){
-    const id='g'+(_grpId++); for(let i=0;i<count;i++){
+    for(let i=0;i<count;i++){
       const pos=findFreeNear(anchorX,anchorY,radius||2,30);
-      const e=makeArcher(pos.x,pos.y); e.groupId=id; e.groupAnchor={x:anchorX,y:anchorY}; e.patrolRadius=radius||2;
+      const e=makeArcher(pos.x,pos.y);
+      e.groupAnchor={x:anchorX,y:anchorY}; e.patrolRadius=radius||2;
       enemies.push(e);
     }
+  }
+  function spawnMain(){
+    enemies.length=0;
+    // due gruppi verso destra, lontani dal portale a sinistra
+    createPatrolGroup(5, COLS-5, 2, 2);
+    createPatrolGroup(5, COLS-5, ROWS-3, 2);
   }
   function findFreeNear(cx,cy,r,tries){ tries=tries||30;
     for(let k=0;k<tries;k++){ const nx=clamp(Math.round(cx+rndInt(-r,r)),0,COLS-1), ny=clamp(Math.round(cy+rndInt(-r,r)),0,ROWS-1);
@@ -274,7 +301,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     } return randEmpty();
   }
 
-  /* Init world: spawn vuota */
+  /* Init spawn */
   (function initSpawn(){
     const res=buildMap('spawn'); map=res.map; applyTheme(res.theme); WORLD.current='spawn'; enemies.length=0; recomputeStats(true);
   })();
@@ -323,7 +350,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     // HUD
     if(inRect(m.sx,m.sy,HUD.atk)){ tryAttackAdjacent(); return; }
     if(inRect(m.sx,m.sy,HUD.pot)){ usePotion(); return; }
-    if(inRect(m.sx,m.sy,HUD.loot)){ /* no loot window in this minimal build */ return; }
     if(inRect(m.sx,m.sy,HUD.char)){ charWin.classList.toggle('hidden'); renderCharPanel(); return; }
 
     // Target / movimento
@@ -374,9 +400,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     addDmgText(t.x,t.y,(crit?'CRIT ':'-')+dmg, crit ? '#facc15' : '#ffd166');
     if(t.hp===0){
       if(target===t){ target=null; autoChase=false; hideTargetFrame(); }
-      logSys('Nemico sconfitto.');
+      logSys('Nemico sconfitto. +25 XP');
       enemies.splice(enemies.indexOf(t),1);
-      // respawn semplice: rimpiazza dopo 1s altrove
+      gainXP(25);
+      // respawn semplice dopo 1s altrove se sei in Main
       setTimeout(()=>{ if(WORLD.current==='main'){ const s=randEmpty(); enemies.push(makeArcher(s.x,s.y)); } }, 1000);
     }
     draw(); updateTargetFrame();
@@ -390,12 +417,11 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     dmg = Math.floor(dmg * (1 - miti));
     // Proiettili %
     if(source==='projectile'){
-      const pr = clamp(player.stats.projRes||0, 0, 0.95);
+      const pr = clamp(player.stats.projRes||0, 0, 0.60);
       dmg = Math.floor(dmg * (1 - pr));
     }
     return Math.max(0, dmg|0);
   }
-
   function takePlayerDamage(amount, label, source){
     const dmg = applyDamageReduction(amount, source);
     player.hp = Math.max(0, player.hp - dmg);
@@ -407,7 +433,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     const res = clamp(player.stats.bleedRes||0, 0, 0.70);
     const tickDmg = Math.max(1, Math.floor(tickDmgBase * (1 - res)));
     player.status.bleed = { ticksLeft:ticks, nextTs:performance.now()+periodMs, period:periodMs, tick:tickDmg };
-    logDmg('Sanguinamento applicato ('+ticks+'× '+tickDmg+').');
+    logDmg('Sanguinamento ('+ticks+'× '+tickDmg+').');
   }
   function updateBleed(now){
     const b=player.status.bleed; if(!b) return;
@@ -425,12 +451,14 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   }
   deathRespawn.onclick=()=>{
     // teleporta allo spawn, cura full
-    const hit = (WORLD.portals[WORLD.current]||[]).find(p=>p.to==='spawn') || {tx:COLS-2, ty:(ROWS>>1)};
     const res=buildMap('spawn'); map=res.map; applyTheme(res.theme); WORLD.current='spawn';
-    player.x = Math.max(1,Math.min(COLS-2, hit.tx)); player.y=Math.max(1,Math.min(ROWS-2, hit.ty));
+    const exit=findSafeExit('spawn', COLS-2, (ROWS>>1));
+    player.x=exit.x; player.y=exit.y; player.vx=exit.x; player.vy=exit.y;
     player.hp=player.maxHp; player.status.bleed=null;
     enemies.length=0; projectiles.length=0; pathQueue=[];
     dead=false; deathOverlay.classList.add('hidden'); cv.style.filter=''; cv.style.opacity='';
+    teleportGuardUntil=performance.now()+600;
+    entryAggroSilenceUntil=performance.now()+900;
     draw();
   };
   deathReset.onclick=()=>location.reload();
@@ -442,7 +470,52 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     return false;
   }
 
-  /* Draw */
+  /* Portals: safe exit + guards */
+  let teleportGuardUntil=0;
+  let entryAggroSilenceUntil=0;
+  function findSafeExit(worldName, px, py){
+    const candidates = [
+      [ 1, 0],[-1, 0],[ 0, 1],[ 0,-1],
+      [ 1, 1],[-1, 1],[ 1,-1],[-1,-1],
+      [ 2, 0],[-2, 0],[ 0, 2],[ 0,-2]
+    ];
+    for (let i=0;i<candidates.length;i++){
+      const nx = clamp(px + candidates[i][0], 0, COLS-1);
+      const ny = clamp(py + candidates[i][1], 0, ROWS-1);
+      if(!walkable(nx,ny)) continue;
+      if(isPortalTile(worldName, nx, ny)) continue;
+      if(!tileFree(nx,ny)) continue;
+      return {x:nx, y:ny};
+    }
+    return {x:px, y:py};
+  }
+  function checkPortalEnter(){
+    const now=performance.now();
+    if(now<teleportGuardUntil) return false;
+    const list=WORLD.portals[WORLD.current]||[];
+    for(let i=0;i<list.length;i++){
+      const p=list[i];
+      if(p.x===player.x && p.y===player.y){
+        // switch world
+        const res=buildMap(p.to); map=res.map; applyTheme(res.theme); WORLD.current=p.to;
+        // safe exit (NON sul portale)
+        const exit = findSafeExit(p.to, p.tx, p.ty);
+        player.x=exit.x; player.y=exit.y; player.vx=exit.x; player.vy=exit.y; pathQueue.length=0;
+        // spawn mobs se Main
+        if(WORLD.current==='main'){ spawnMain(); }
+        else { enemies.length=0; projectiles.length=0; }
+        // guards
+        teleportGuardUntil = performance.now()+600;
+        entryAggroSilenceUntil = performance.now()+900;
+        logSys('Teletrasporto: '+(WORLD.current==='main'?'Main':'Spawn'));
+        draw();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /* Render */
   function draw(){
     ctx.clearRect(0,0,cv.width,cv.height);
     // tiles
@@ -477,8 +550,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     // HUD overlay
     drawHud();
 
-    // status
-    statusEl.textContent=`build: ${BUILD} | HP ${player.hp}/${player.maxHp} | ATK ${player.atkMin}–${player.atkMax} | Crit ${(getCritChance()*100)|0}% | atkCD ${getAtkCd()}ms`;
+    // status (mostro XP progress)
+    const need = (player.lvl<MAX_LVL) ? xpNeeded(player.lvl) : 1;
+    const ratio = (player.lvl<MAX_LVL) ? Math.min(1, player.exp/need) : 1;
+    statusEl.textContent=`build: ${BUILD} | LV ${player.lvl} ${player.lvl<MAX_LVL?('('+Math.floor(ratio*100)+'%)'):''} | HP ${player.hp}/${player.maxHp} | ATK ${player.atkMin}–${player.atkMax} | Crit ${(getCritChance()*100|0)}% | atkCD ${getAtkCd()}ms`;
   }
 
   function drawPortals(){
@@ -505,15 +580,12 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     ctx.strokeStyle=isTarget?'#f87171':'#0008'; ctx.lineWidth=isTarget?2:1; ctx.strokeRect(px,py,w,h); ctx.lineWidth=1;
   }
   function drawTargetRing(tx,ty){ const x=tx*TILE+TILE/2, y=ty*TILE+TILE/2; ctx.save(); ctx.strokeStyle='#ef4444'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(x,y,28,0,Math.PI*2); ctx.stroke(); ctx.restore(); }
-  function roundRectPath(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
-  function drawHudBtn(r, glyph, enabled){ ctx.save(); ctx.globalAlpha=enabled?1:0.55; ctx.fillStyle='rgba(15,23,42,.85)'; ctx.strokeStyle='#1f2a44'; ctx.lineWidth=2; roundRectPath(r.x,r.y,r.w,r.h,12); ctx.fill(); ctx.stroke(); ctx.font='28px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#e5e7eb'; ctx.fillText(glyph, r.x + r.w/2, r.y + r.h/2); ctx.restore(); }
+  function roundRectPath(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+  function drawHudBtn(r, glyph, enabled){ ctx.save(); ctx.globalAlpha=enabled?1:0.55; ctx.fillStyle='rgba(15,23,42,.85)'; ctx.strokeStyle='#1f2a44'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(r.x+12,r.y); ctx.arcTo(r.x+r.w,r.y,r.x+r.w,r.y+r.h,12); ctx.arcTo(r.x+r.w,r.y+r.h,r.x,r.y+r.h,12); ctx.arcTo(r.x,r.y+r.h,r.x,r.y,12); ctx.arcTo(r.x,r.y,r.x+r.w,r.y,12); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.font='28px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#e5e7eb'; ctx.fillText(glyph, r.x + r.w/2, r.y + r.h/2); ctx.restore(); }
   function drawHud(){
     drawHudBtn(HUD.atk, '🗡️', (performance.now()-player.lastAtk)>=getAtkCd());
     drawHudBtn(HUD.pot, '🍵', player.pots>0);
-    drawHudBtn(HUD.loot, '👜', false);
-    // tasto personaggio
     drawHudBtn(HUD.char, '👤', true);
-    // marker destinazione
     if(destMarker && destMarker.ttl>0){
       const a = Math.min(1, destMarker.ttl/400);
       ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle='#93c5fd'; ctx.lineWidth=2;
@@ -522,9 +594,9 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     }
   }
 
-  /* Target frame (lite) */
-  function updateTargetFrame(){ /* visual già sul canvas */ }
-  function hideTargetFrame(){ /* no-op */ }
+  /* Target frame (placeholder: tutto è in canvas) */
+  function updateTargetFrame(){}
+  function hideTargetFrame(){}
 
   /* Loop */
   let lastStepTs=performance.now();
@@ -533,7 +605,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       const now=performance.now();
       const dt = Math.min(200, now-lastStepTs)|0; lastStepTs=now;
 
-      // Path follow (player): consuma tutta la coda
+      // Player path follow
       if(!dead && pathQueue.length){
         const next = pathQueue[0];
         let blocked=!walkable(next.x,next.y);
@@ -545,25 +617,18 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         }
       }
 
-      // Portali
-      if(checkPortalEnter()){
-        // switch mappa
-        if(WORLD.current==='main'){
-          const res=buildMap('main'); map=res.map; applyTheme(res.theme);
-          spawnMain();
-        } else {
-          const res=buildMap('spawn'); map=res.map; applyTheme(res.theme);
-          enemies.length=0; projectiles.length=0;
-        }
-        draw();
-      }
+      // Portali (safe + guard)
+      checkPortalEnter();
 
       // Enemy AI
       for(let j=0;j<enemies.length;j++){
         const e=enemies[j];
-        // aggro
+        // aggro (rispettando il silenzio post-teleport)
+        if(now >= entryAggroSilenceUntil){
+          const distC=chebyshev(e,player);
+          if(!e.aggro && distC<=e.aggroRange){ e.aggro=true; e.lastSeenTs=now; }
+        }
         const distC=chebyshev(e,player);
-        if(!e.aggro && distC<=e.aggroRange){ e.aggro=true; e.lastSeenTs=now; }
         const tooFar = chebyshev({x:e.spawnX,y:e.spawnY}, player) > e.leashRange || distC > e.leashRange;
         if(e.aggro){
           if(hasLoS(e.x,e.y,player.x,player.y) || distC<=1) e.lastSeenTs=now;
@@ -574,14 +639,13 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         e.moveTick=(e.moveTick+1)%e.moveEvery;
         const canMove=(e.moveTick===0);
 
-        if(e.aggro){
+        if(e.aggro && now>=entryAggroSilenceUntil){
           const distM=Math.abs(e.x-player.x)+Math.abs(e.y-player.y);
           const inRange = (distM>=e.rangeMin && distM<=e.rangeMax && hasLoS(e.x,e.y,player.x,player.y));
           if(inRange){
             if(now-e.lastShot>=e.atkCd){
               e.lastShot=now;
               // windup breve, poi scocca
-              e.windupStart=now;
               setTimeout(()=>{
                 const dx=(player.x===e.x)?0:(player.x>e.x?1:-1);
                 const dy=(player.y===e.y)?0:(player.y>e.y?1:-1);
@@ -606,11 +670,9 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
           }
         } else {
           // rientro
-          if((e.x!==e.spawnX || e.y!==e.spawnY)){
-            if(canMove){
-              if(!e.path || !e.path.length) e.path=bfs(e.x,e.y,e.spawnX,e.spawnY)||[];
-              tryStepAlongPath(e, now);
-            }
+          if((e.x!==e.spawnX || e.y!==e.spawnY) && canMove){
+            if(!e.path || !e.path.length) e.path=bfs(e.x,e.y,e.spawnX,e.spawnY)||[];
+            tryStepAlongPath(e, now);
           }
         }
       }
@@ -622,15 +684,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         const nx=pr.x+pr.dx, ny=pr.y+pr.dy;
         if(!inside(nx,ny) || map[ny][nx]===1){ projectiles.splice(pi,1); continue; }
         if(nx===player.x && ny===player.y){
-          // colpito
           const base=rndInt(pr.dmg-1, pr.dmg+1);
           takePlayerDamage(base, '-', 'projectile');
-          // bleed chance
-          if(Math.random() < (pr.bleedChance||0)){
-            applyBleed(4, 4, 700); // 4 tick da 4 base, ogni 0.7s (ridotti da bleedRes)
-          }
-          projectiles.splice(pi,1);
-          continue;
+          if(Math.random() < (pr.bleedChance||0)){ applyBleed(4, 4, 700); }
+          projectiles.splice(pi,1); continue;
         }
         startTween(pr, pr.x, pr.y, nx, ny, now);
         pr.x=nx; pr.y=ny;
@@ -651,10 +708,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         }
       }
 
-      // Bleed tick
+      // Bleed tick + dmg texts + dest marker
       updateBleed(now);
-
-      // dmg texts
       updateDmgTexts(dt);
       if(destMarker){ destMarker.ttl -= dt; if(destMarker.ttl<=0) destMarker=null; }
 
@@ -673,29 +728,14 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     const fx=e.x, fy=e.y; e.x=nxt.x; e.y=nxt.y; startTween(e,fx,fy,e.x,e.y,now);
   }
 
-  function checkPortalEnter(){
-    const list=WORLD.portals[WORLD.current]||[];
-    for(let i=0;i<list.length;i++){
-      const p=list[i];
-      if(p.x===player.x && p.y===player.y){
-        // teleport
-        const res=buildMap(p.to); map=res.map; applyTheme(res.theme); WORLD.current=p.to;
-        // posizione uscita sicura
-        const nx=clamp(p.tx,1,COLS-2), ny=clamp(p.ty,1,ROWS-2);
-        player.x=nx; player.y=ny; player.vx=nx; player.vy=ny; pathQueue.length=0;
-        logSys('Teletrasporto: '+(WORLD.current==='main'?'Main':'Spawn'));
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /* Character panel rendering */
+  /* Character panel */
   function pct(v){ return Math.round((v||0)*100); }
   function renderCharPanel(){
     if(charWin.classList.contains('hidden')) return;
+    const need = (player.lvl<MAX_LVL) ? xpNeeded(player.lvl) : 1;
     const basics=[
       ['Livello','LV '+player.lvl],
+      ['XP',''+player.exp+' / '+(player.lvl<MAX_LVL?need:'—')],
       ['HP',''+player.hp+' / '+player.maxHp],
       ['Attacco',''+player.atkMin+'–'+player.atkMax],
       ['Crit Chance', pct(getCritChance())+'%'],
@@ -705,9 +745,9 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     const stats=[
       ['Difesa (flat)', (player.stats.defense|0)],
       ['Mitigazione', pct(clamp(player.stats.mitigation||0,0,0.60))+'%'],
-      ['Res. Proiettili', pct(player.stats.projRes||0)+'%'],
+      ['Res. Proiettili', pct(clamp(player.stats.projRes||0,0,0.60))+'%'],
       ['Res. Bleed', pct(clamp(player.stats.bleedRes||0,0,0.70))+'%'],
-      ['Vel. Attacco', pct(player.stats.atkSpeed||0)+'%'],
+      ['Vel. Attacco', pct(clamp(player.stats.atkSpeed||0,0,0.50))+'%'],
       ['Luck (Crit +)', pct(player.stats.luck||0)+'%']
     ];
     charBasics.innerHTML = basics.map(kv=>`<div class="stat"><span class="k">${kv[0]}</span><span class="v">${kv[1]}</span></div>`).join('');
