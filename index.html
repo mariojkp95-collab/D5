@@ -4,7 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Drakoria — HUD-5</title>
-  <link rel="stylesheet" href="css/style.css">
+
+  <!-- CSS relativo alla cartella -->
+  <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
 <header>
@@ -31,7 +33,7 @@
   <div id="status"></div>
 </main>
 
-<!-- HUD buttons (nascosti: l’HUD è in-canvas) -->
+<!-- HUD buttons -->
 <button id="btnAttack" class="fab" aria-label="Attacca">🗡️</button>
 <canvas id="atkCdCanvas" width="56" height="56" aria-hidden="true"></canvas>
 <button id="btnUsePotion" class="fab" aria-label="Usa pozione">🍵</button>
@@ -77,7 +79,9 @@
 <!-- Inventory -->
 <section id="invWin" class="inv hidden" role="dialog" aria-modal="true" aria-label="Inventario">
   <div class="inv-h"><span>Inventario</span><button id="invClose" class="inv-x">×</button></div>
+
   <div class="inv-tabs" id="invTabs"></div>
+
   <div class="inv-body">
     <div class="inv-eq">
       <div class="slotEq" id="eqWeapon">
@@ -143,9 +147,9 @@
   </div>
 </div>
 
-<!-- JS -->
-<script src="js/game.js"></script>
-<script src="js/patch-cooldown.js"></script>
-<script src="js/patch-abil-ux-v5.js"></script>
+<!-- JS: tutti relativi -->
+<script defer src="./js/game.js"></script>
+<script defer src="./js/patch-cd.js"></script>
+<script defer src="./js/patch-abil-ux-v5.js"></script>
 </body>
 </html>
