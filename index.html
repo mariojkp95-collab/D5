@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Drakoria — OneFile (HUD-9b)</title>
+<title>Drakoria — OneFile (HUD-9c)</title>
 <style>
 :root{
   --bg:#0b1224; --panel:#0f172a; --stroke:#1f2a44; --text:#e5e7eb; --muted:#9ca3af;
@@ -77,7 +77,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 .eqName{color:#e5e7eb;font-weight:600}
 
 /* Settings */
-.set{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:380px; max-width:94vw;
+.set{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:400px; max-width:94vw;
      background:#0f172a; border:1px solid #1f2a44; border-radius:12px; box-shadow:0 18px 44px rgba(0,0,0,.45); z-index:44}
 .set-h{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #1f2a44;font-weight:700}
 .set-x{width:32px;height:26px;border-radius:6px;border:1px solid #31406e;background:#26325a;color:#fff;cursor:pointer}
@@ -85,13 +85,13 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 .set-row{display:flex;justify-content:space-between;align-items:center;margin:8px 0}
 .hidden{display:none}
 
-/* HUD tooltip status (mobile safe) */
+/* HUD toast */
 .toast{position:fixed; left:50%; bottom:84px; transform:translateX(-50%); background:rgba(15,23,42,.9); border:1px solid #1f2a44; color:#e5e7eb; padding:6px 10px; border-radius:10px; z-index:55; display:none}
 </style>
 </head>
 <body>
 <header>
-  <div><strong>Drakoria</strong> <span class="muted">one-file HUD-9b</span></div>
+  <div><strong>Drakoria</strong> <span class="muted">one-file HUD-9c</span></div>
   <div>
     <button id="btnInv" class="btn">Inventario</button>
     <button id="btnSettings" class="btn">⚙︎</button>
@@ -104,8 +104,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 <main>
   <canvas id="game" width="1344" height="768" aria-label="Gioco"></canvas>
   <p class="help">
-    Tap per muoverti • tap su un <b>nemico</b> per target • <b>doppio tap</b> o <b>tap prolungato (0.5s)</b> per auto-inseguire • SPAZIO/🗡️ attacca.  
-    Portale viola → mondo <b>Main</b> (solo arcieri). Mini-mappa rotonda sempre attiva. Bleed 🩸 può essere applicato dagli arcieri.
+    Tap per muoverti (cerchio di destinazione) • tap nemico per target • doppio tap/press prolungato per auto-inseguire • SPAZIO/🗡️ attacca.  
+    Portale viola → mondo <b>Main</b> (arcieri). Mini-mappa rotonda sempre attiva. Bleed 🩸 può essere applicato dagli arcieri.
   </p>
   <div id="status"></div>
 </main>
@@ -118,7 +118,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 <div id="deathOverlay" class="death hidden" role="dialog" aria-modal="true" aria-label="Game Over">
   <div class="death-box">
     <div class="death-title">Sei morto</div>
-    <div class="death-sub">Scegli <b>Respawn</b> per tornare allo spawn con vita piena, oppure <b>Reset</b> per ricaricare il gioco.</div>
+    <div class="death-sub">Respawn ti riporta allo spawn con vita piena.</div>
     <div class="death-actions">
       <button id="deathRespawn" class="btn">Respawn</button>
       <button id="deathReset" class="btn">Reset</button>
@@ -159,14 +159,15 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       </select>
     </div>
     <div class="set-row"><span>Auto-pickup (monete/pozioni)</span><label><input type="checkbox" id="optAuto" checked> Attivo</label></div>
+    <div class="set-row"><span>Auto-pozione &lt; 30% HP</span><label><input type="checkbox" id="optAutoPot" checked> Attivo</label></div>
   </div>
 </section>
 
 <script>
-/* ===== Drakoria — ONE FILE BUILD (HUD-9b) ===== */
+/* ===== Drakoria — ONE FILE BUILD (HUD-9c) ===== */
 (function(){
-  var BUILD='HUD-9b';
-  var SAVE_KEY='save_of_hud9';
+  var BUILD='HUD-9c';
+  var SAVE_KEY='save_of_hud9c';
   var cv=document.getElementById('game'); var ctx=cv.getContext('2d');
 
   /* UI refs */
@@ -178,6 +179,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   var invGrid=document.getElementById('invGrid');
   var setWin=document.getElementById('setWin'), btnSettings=document.getElementById('btnSettings'), setClose=document.getElementById('setClose');
   var optMute=document.getElementById('optMute'), optSpeed=document.getElementById('optSpeed'), optAuto=document.getElementById('optAuto');
+  var optAutoPot=document.getElementById('optAutoPot');
   var errBox=document.getElementById('errBox');
   var logBody=document.getElementById('logBody');
   var deathOverlay=document.getElementById('deathOverlay'), deathRespawn=document.getElementById('deathRespawn'), deathReset=document.getElementById('deathReset');
@@ -221,10 +223,11 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   }
 
   /* Settings */
-  var SETTINGS = { mute:false, speed:1, autoPickup:true };
+  var SETTINGS = { mute:false, speed:1, autoPickup:true, autoPotion:true };
   optMute.onchange=function(){ SETTINGS.mute=optMute.checked; toast(SETTINGS.mute?'Audio muto':'Audio attivo'); };
   optSpeed.onchange=function(){ setSpeed(parseFloat(optSpeed.value||'1')); toast('Velocità '+SETTINGS.speed+'×'); };
   optAuto.onchange=function(){ SETTINGS.autoPickup=optAuto.checked; toast(SETTINGS.autoPickup?'Auto-pickup ON':'Auto-pickup OFF'); };
+  optAutoPot.onchange=function(){ SETTINGS.autoPotion=optAutoPot.checked; toast(SETTINGS.autoPotion?'Auto-pozione ON':'Auto-pozione OFF'); };
   btnSettings.onclick=function(){ setWin.classList.toggle('hidden'); };
   setClose.onclick=function(){ setWin.classList.add('hidden'); };
 
@@ -232,8 +235,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   var map=[];
   var player={ x:12,y:4, baseMaxHp:100, baseAtkMin:6, baseAtkMax:12, maxHp:100, hp:100, atkMin:6, atkMax:12,
                coins:0,pots:1,lastAtk:0,atkCd:450,lvl:1,exp:0, critChance:0.10, critMult:1.5 };
-  // Status alterati (solo MOB li applicano). Esempio: bleed: {until, nextTick, tickMs, min, max}
   player.status = { bleed:null };
+  var lastAutoPotTs=0;
 
   var enemies=[], coins=[], potions=[], projectiles=[], lootBags=[];
   var BAG_TTL_MS=90000, BAG_WARN_MS=10000;
@@ -251,7 +254,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     var id='g'+(_grpId++); var made=[];
     for(var i=0;i<count;i++){
       var pos=findFreeNear(anchorX,anchorY,radius||2,30);
-      var e=makeArcher(pos.x,pos.y); // solo archers
+      var e=makeArcher(pos.x,pos.y);
       e.groupId=id; e.groupAnchor={x:anchorX,y:anchorY}; e.patrolRadius=Math.max(1,(radius|0)||2);
       e.spawnX=e.x; e.spawnY=e.y; e.moveEvery=e.moveEvery||6;
       enemies.push(e); made.push(e);
@@ -295,12 +298,16 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       var row=d.querySelector('.row');
       if(it.type==='weapon'||it.type==='armor'){ var beq=document.createElement('button'); beq.className='act'; beq.textContent='Equip'; beq.onclick=function(){ equip(it); }; row.appendChild(beq); }
       if(it.type==='potion'||it.type==='consumable'){ var busa=document.createElement('button'); busa.className='act'; busa.textContent='Usa';
-        busa.onclick=function(){ var healed=0; if(it.heal){ var before=player.hp; player.hp=Math.min(player.maxHp,player.hp+it.heal); healed=player.hp-before; if(healed>0){ logHeal('Consumabile: +'+healed+' HP.'); } }
-          if(typeof it.qty==='number'){ it.qty--; if(it.qty<=0){ var idx=inventory.indexOf(it); if(idx>=0) inventory.splice(idx,1); } } renderInventory(); draw(); };
-        row.appendChild(busa); }
+        busa.onclick=function(){ useConsumable(it); }; row.appendChild(busa); }
       invGrid.appendChild(d);
     });
     refreshEquipUi();
+  }
+  function useConsumable(it){
+    var healed=0;
+    if(it.heal){ var before=player.hp; player.hp=Math.min(player.maxHp,player.hp+it.heal); healed=player.hp-before; if(healed>0){ logHeal('Consumabile: +'+healed+' HP.'); } }
+    if(typeof it.qty==='number'){ it.qty--; if(it.qty<=0){ var idx=inventory.indexOf(it); if(idx>=0) inventory.splice(idx,1); } }
+    renderInventory(); draw();
   }
   btnInv.onclick=function(){ invWin.classList.toggle('hidden'); renderInventory(); };
   invClose.onclick=function(){ invWin.classList.add('hidden'); };
@@ -320,7 +327,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function getVar(n){ var cs=window.getComputedStyle(document.documentElement); return cs.getPropertyValue(n).trim(); }
   function randEmpty(){ for(var tries=0; tries<200; tries++){ var x=rndInt(0,COLS-1), y=rndInt(0,ROWS-1); if(walkable(x,y)&&tileFree(x,y)) return {x:x,y:y}; } return {x:1,y:1}; }
 
-  /* BFS */
+  /* BFS — FIX: push corretto {x:nx, y:ny} */
   function bfs(sx,sy,tx,ty){
     if(!walkable(tx,ty)) return null;
     var q=[{x:sx,y:sy}], head=0, prev={}, seen={}; seen[sx+','+sy]=1;
@@ -330,9 +337,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         var path=[], key=tx+','+ty; while(prev[key]){ var s=key.split(','); path.push({x:+s[0],y:+s[1]}); key=prev[key].x+','+prev[key].y; }
         path.reverse(); return path;
       }
-      for(var d=0;d<4;d++){
+      for(var d=0; d<4; d++){
         var nx=c.x+dirs[d][0], ny=c.y+dirs[d][1], kk=nx+','+ny;
-        if(!walkable(nx,ny)||seen[kk]) continue; seen[kk]=1; prev[kk]={x:c.x,y:c.y}; q.push({x:nx,ny});
+        if(!walkable(nx,ny)||seen[kk]) continue; seen[kk]=1; prev[kk]={x:c.x,y:c.y};
+        q.push({x:nx, y:ny}); // <<< fix
       }
     } return null;
   }
@@ -358,17 +366,17 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function updateTweens(){ var now=performance.now(); tweenUpdate(player,now); for(var i=0;i<enemies.length;i++) tweenUpdate(enemies[i],now); for(var j=0;j<projectiles.length;j++) tweenUpdate(projectiles[j],now); }
 
   /* Input + HUD in-canvas */
-  var HUD={ atk:null, pot:null, loot:null };
-  function layoutHud(){ HUD.atk={x:cv.width-86,y:cv.height-86,w:72,h:72}; HUD.pot={x:cv.width-166,y:cv.height-86,w:72,h:72}; HUD.loot={x:14,y:cv.height-86,w:72,h:72}; }
-  window.addEventListener('resize',layoutHud,false); layoutHud();
+  var HUD={ atk:{x:cv.width-86,y:cv.height-86,w:72,h:72}, pot:{x:cv.width-166,y:cv.height-86,w:72,h:72}, loot:{x:14,y:cv.height-86,w:72,h:72} };
+  window.addEventListener('resize',function(){ HUD.atk={x:cv.width-86,y:cv.height-86,w:72,h:72}; HUD.pot={x:cv.width-166,y:cv.height-86,w:72,h:72}; HUD.loot={x:14,y:cv.height-86,w:72,h:72}; },false);
+
   var target=null, autoChase=false, lastEnemyTapTs=0, lastEnemyTapId=-1;
-  var pathQueue=[], holdTimer=null, holdStart=0, holdPos=null;
+  var pathQueue=[], holdTimer=null;
+  var destMarker=null; // {x,y,ttl}
 
   function canvasToTile(ev){
     var r=cv.getBoundingClientRect(), t=ev.touches&&ev.touches[0];
     var cx=t?t.clientX:ev.clientX, cy=t?t.clientY:ev.clientY;
     var sx=(cx-r.left)*(cv.width/r.width), sy=(cy-r.top)*(cv.height/r.height);
-    // >>> FIX: clamp corretto <<<
     var tx = Math.max(0, Math.min(COLS-1, (sx/TILE)|0));
     var ty = Math.max(0, Math.min(ROWS-1, (sy/TILE)|0));
     return {sx:sx, sy:sy, tx:tx, ty:ty};
@@ -379,9 +387,9 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 
   function onPointerDown(ev){
     if(dead) return;
-    var m=canvasToTile(ev); holdStart=performance.now(); holdPos={sx:m.sx,sy:m.sy};
+    var m=canvasToTile(ev), pos={sx:m.sx,sy:m.sy};
     clearTimeout(holdTimer);
-    holdTimer=setTimeout(function(){ var enemy=getEnemyAtScreen(holdPos.sx,holdPos.sy); if(enemy){ target=enemy; autoChase=true; pathQueue=[]; updateTargetFrame(); toast('Auto-inseguimento'); draw(); } },500);
+    holdTimer=setTimeout(function(){ var enemy=getEnemyAtScreen(pos.sx,pos.sy); if(enemy){ target=enemy; autoChase=true; pathQueue=[]; updateTargetFrame(); toast('Auto-inseguimento'); draw(); } },500);
   }
   function onPointerUp(ev){
     if(dead) return; clearTimeout(holdTimer);
@@ -394,10 +402,11 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       lastEnemyTapId=clicked.id; lastEnemyTapTs=now; updateTargetFrame(); draw(); return; }
     autoChase=false;
     var p=bfs(player.x,player.y,m.tx,m.ty);
-    if(p&&p.length){ pathQueue=p; } else {
+    if(p&&p.length){ pathQueue=p; destMarker={x:m.tx,y:m.ty,ttl:1400}; }
+    else{
       var dx=Math.sign(m.tx-player.x), dy=Math.sign(m.ty-player.y);
       var tryFirst=(Math.abs(m.tx-player.x)>=Math.abs(m.ty-player.y))?[{x:player.x+dx,y:player.y},{x:player.x,y:player.y+dy}]:[{x:player.x,y:player.y+dy},{x:player.x+dx,y:player.y}];
-      var stepped=false; for(var k=0;k<tryFirst.length;k++){ var nxt=tryFirst[k]; if(inside(nxt.x,nxt.y)&&walkable(nxt.x,nxt.y)){ pathQueue=[nxt]; stepped=true; break; } }
+      var stepped=false; for(var k=0;k<tryFirst.length;k++){ var nxt=tryFirst[k]; if(inside(nxt.x,nxt.y)&&walkable(nxt.x,nxt.y)){ pathQueue=[nxt]; destMarker={x:nxt.x,y:nxt.y,ttl:700}; stepped=true; break; } }
       if(!stepped) toast('Nessun percorso');
     }
     if(target && chebyshev(player,target)===1 && (now-player.lastAtk)>=player.atkCd){ attackEnemy(target); return; }
@@ -424,7 +433,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function rollCrit(ch){ return Math.random()<(ch||0); }
   function rndAtk(min,max,critChance,critMult){ var base=rndInt(min,max), isCrit=rollCrit(critChance), dmg=Math.floor(base*(isCrit?(critMult||1.5):1)); return {dmg:dmg,isCrit:isCrit}; }
 
-  // === HIT-STOP + MICRO SHAKE ===
+  // HIT-STOP + shake
   var hitStopMs=0, shakeAmp=0;
   function triggerHitStop(ms,amp){ hitStopMs=Math.max(hitStopMs,ms|0); shakeAmp=Math.max(shakeAmp,amp||0); }
 
@@ -453,6 +462,14 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     triggerHitStop(70,2);
     logDmg('Subisci '+amount+' danni.');
     if(player.hp===0) gameOver();
+  }
+
+  /* Pozioni */
+  function usePotion(){
+    if(player.pots<=0 || player.hp>=player.maxHp) return false;
+    var heal=35; player.pots--; player.hp=Math.min(player.maxHp, player.hp+heal);
+    addDmgText(player.x,player.y,'+'+heal,'#86efac'); logHeal('Pozione: +'+heal+' HP.'); triggerHitStop(30,1);
+    return true;
   }
 
   /* Items / Loot */
@@ -519,7 +536,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     if(d && d.world){ WORLD.current=d.world; applyTheme(WORLD.current==='main'?THEMES.main:THEMES.spawn); }
     if(d && d.worldInited){ worldInited=d.worldInited; }
     inventory=Array.isArray(d.inventory)?d.inventory:[]; equipped=d&&d.equipped?d.equipped:{weapon:null,armor:null};
-    SETTINGS=d&&d.settings?d.settings:SETTINGS; optMute.checked=!!SETTINGS.mute; optSpeed.value=String(SETTINGS.speed||1); optAuto.checked=!!SETTINGS.autoPickup; setSpeed(SETTINGS.speed||1);
+    SETTINGS=d&&d.settings?d.settings:SETTINGS; optMute.checked=!!SETTINGS.mute; optSpeed.value=String(SETTINGS.speed||1); optAuto.checked=!!SETTINGS.autoPickup; optAutoPot.checked=!!SETTINGS.autoPotion; setSpeed(SETTINGS.speed||1);
     recomputeStats(false); refreshEquipUi(); renderInventoryIfOpen();
     toast('Caricato.'); dead=false; deathOverlay.classList.add('hidden'); cv.style.filter=''; cv.style.opacity='';
   }catch(e){ panic('load', e); } };
@@ -582,24 +599,31 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     logSys('Teletrasporto: '+(WORLD.current==='spawn'?'Spawn':'Main'));
   }
 
-  /* === STEP LOOP (fisso con accumulator, via rAF) === */
+  /* STEP LOOP con accumulator via rAF (no doppie definizioni) */
   var SIM_BASE=120;           // ms per tick a speed 1
   var simStepMs=SIM_BASE;     // aggiornato da setSpeed()
   var simAcc=0;               // accumulatore
-  var lastTs=performance.now();
+  var lastFrameTs=performance.now();
   function setSpeed(s){ SETTINGS.speed=(+s)||1; simStepMs=Math.max(40, SIM_BASE/SETTINGS.speed); }
-  setSpeed(1); // init
+  setSpeed(1);
 
-  // Respawn periodico in Main (solo arcieri)
-  var ENEMY_CAP_MAIN=6;
+  // Respawn periodico in Main
   var respawnAcc=0;
 
   var lastPlayerX=player.x, lastPlayerY=player.y;
 
   function fixedStep(){
     try{
+      // auto-pozione semplice
+      if(SETTINGS.autoPotion){
+        if(player.hp>0 && player.hp<Math.floor(player.maxHp*0.30) && player.pots>0 && performance.now()-lastAutoPotTs>5000){
+          if(usePotion()) lastAutoPotTs=performance.now();
+        }
+      }
+
       processStatuses(simStepMs);
 
+      // auto-chase + auto-attack
       if(autoChase && target){
         var still=enemies.indexOf(target)!==-1;
         if(!still){ autoChase=false; target=null; hideTargetFrame(); }
@@ -612,18 +636,21 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         }
       }
 
+      // Player path consume (continua fino a destinazione)
       if(pathQueue.length){
         var next=pathQueue.shift(), blocked=false;
         if(!walkable(next.x,next.y)) blocked=true;
         for(var i=0;i<enemies.length;i++) if(enemies[i].x===next.x&&enemies[i].y===next.y){ blocked=true; break; }
         if(!blocked){ var fx=player.x, fy=player.y; player.x=next.x; player.y=next.y; startTween(player,fx,fy,player.x,player.y,performance.now()); }
         else pathQueue=[];
+        if(destMarker && (!pathQueue.length || (player.x===destMarker.x && player.y===destMarker.y))) destMarker=null;
       }
 
       var justEntered=(player.x!==lastPlayerX || player.y!==lastPlayerY);
       checkPortalAndTeleport(justEntered);
       lastPlayerX=player.x; lastPlayerY=player.y;
 
+      // Enemy AI
       var now=performance.now();
       for(var j=0;j<enemies.length;j++){
         var e=enemies[j], distC=chebyshev(e,player);
@@ -652,9 +679,14 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
           if(adj && (now-e.lastPoke)>=e.pokeCd){ e.lastPoke=now; var a2=rndAtk(4,7,0.05,1.5); takePlayerDamage(a2.dmg, a2.isCrit?'CRIT -':'-');
             if(Math.random()<0.35) applyBleed(5000, 600, 2, 4);
           }
-        } else if(canMove){ var pth=bfsToAdjacencySmart(e.x,e.y,player.x,player.y,'ranged')||bfs(e.x,e.y,player.x,player.y); if(pth&&pth.length>2) pth.length=2; e.path=pth||e.path||[]; tryStepAlongPath(e); }
+        } else if(canMove){
+          var pth=bfsToAdjacencySmart(e.x,e.y,player.x,player.y,'ranged')||bfs(e.x,e.y,player.x,player.y);
+          if(pth&&pth.length>2) pth.length=2; e.path=pth||e.path||[];
+          tryStepAlongPath(e);
+        }
       }
 
+      // Proiettili
       for(var pi=projectiles.length-1; pi>=0; pi--){
         var pr=projectiles[pi]; pr.spdTick=(pr.spdTick+1)%2; if(pr.spdTick!==0) continue;
         var nx=pr.x+pr.dx, ny=pr.y+pr.dy;
@@ -667,15 +699,18 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         startTween(pr,pr.x,pr.y,nx,ny,performance.now()); pr.x=nx; pr.y=ny;
       }
 
+      // Pickup magnet
       for(var c=coins.length-1;c>=0;c--){ if(chebyshev(coins[c],player)<=1){ coins.splice(c,1); player.coins++; logLoot('Moneta +1'); } }
-      for(var p=potions.length-1;p>=0;p--){ if(chebyshev(potions[p],player)<=1){ potions.splice(p,1); player.pots++; logLoot('Pozione +1'); } }
+      for(var p=0;p>=0 && p<potions.length;p++){ if(chebyshev(potions[p],player)<=1){ potions.splice(p,1); player.pots++; logLoot('Pozione +1'); } else p++; }
 
+      // Loot TTL + auto-pickup
       var nowt=performance.now();
       for(var lb=lootBags.length-1; lb>=0; lb--){
         var b=lootBags[lb]; var remain=b.ttlMs-(nowt-b.createdAt); if(remain<=0){ lootBags.splice(lb,1); continue; }
         if(SETTINGS.autoPickup && b.x===player.x && b.y===player.y){ var emptied=autoPickupCommons(b); if(emptied){ lootBags.splice(lb,1); } }
       }
 
+      // Respawn in main
       if(WORLD.current==='main'){
         respawnAcc += simStepMs;
         if(respawnAcc>=4000){ respawnAcc=0;
@@ -717,11 +752,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     }
   }
 
-  /* Anim loop: hit-stop aware */
-  var SIM_BASE=120, simStepMs=SIM_BASE, simAcc=0; // re-declared for clarity in this block
-  function setSpeed(s){ SETTINGS.speed=(+s)||1; simStepMs=Math.max(40, SIM_BASE/SETTINGS.speed); }
-  setSpeed(1);
-  var lastFrameTs=performance.now();
   function frame(ts){
     var dt = ts - lastFrameTs; lastFrameTs = ts;
     if(hitStopMs > 0){ hitStopMs -= dt; } else { simAcc += dt; while(simAcc >= simStepMs){ fixedStep(); simAcc -= simStepMs; } }
@@ -780,6 +810,14 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       var px2=ptx*TILE+TILE/2, py2=pty*TILE+TILE/2; ctx.fillStyle='#f87171'; ctx.beginPath(); ctx.arc(px2,py2,6,0,Math.PI*2); ctx.fill();
     }
 
+    // Marker di destinazione
+    if(destMarker){
+      var pulse = (Math.sin(now/180)+1)/2;
+      var dx=destMarker.x*TILE+TILE/2, dy=destMarker.y*TILE+TILE/2;
+      ctx.save(); ctx.globalAlpha=0.75; ctx.strokeStyle='#60a5fa'; ctx.lineWidth=2+pulse*1.5; ctx.beginPath(); ctx.arc(dx,dy,18+pulse*5,0,Math.PI*2); ctx.stroke(); ctx.restore();
+      destMarker.ttl -= 16; if(destMarker.ttl<=0) destMarker=null;
+    }
+
     drawDmgTexts();
     drawXpBar();
     drawMiniOverlay();
@@ -788,8 +826,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     ctx.restore();
 
     if(player.status.bleed){
-      var pulse = (Math.sin(now/180)+1)/2 * 0.12 + 0.06;
-      ctx.save(); ctx.globalAlpha=pulse; ctx.fillStyle='#7f1d1d'; ctx.fillRect(0,0,cv.width,cv.height); ctx.restore();
+      var pv = (Math.sin(now/180)+1)/2 * 0.12 + 0.06;
+      ctx.save(); ctx.globalAlpha=pv; ctx.fillStyle='#7f1d1d'; ctx.fillRect(0,0,cv.width,cv.height); ctx.restore();
     }
 
     ctx.fillStyle='#ffffffcc'; ctx.font='bold 14px system-ui'; ctx.fillText('BUILD '+BUILD, 8, cv.height-10);
@@ -821,7 +859,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   }
   function drawTargetRing(tx,ty){ var x=tx*TILE+TILE/2,y=ty*TILE+TILE/2; ctx.save(); ctx.strokeStyle='#ef4444'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(x,y,28,0,Math.PI*2); ctx.stroke(); ctx.restore(); }
   var MAX_LVL=99; function xpNeeded(l){ return Math.floor(50*Math.pow(l,1.5)); }
-  function drawXpBar(){ var pad=6,h=10,x=pad,y=pad,w=cv.width-pad*2,need=(player.lvl<MAX_LVL?xpNeeded(player.lvl):1),ratio=(player.lvl<MAX_LVL?Math.max(0,Math.min(1,player.exp/need)):1); ctx.fillStyle='rgba(11,18,36,.66)'; ctx.fillRect(x,y,w,h); ctx.fillStyle='#7c3aed'; ctx.fillRect(x,y,w*ratio,h); ctx.strokeStyle='#1f2a44'; ctx.strokeRect(x,y,w,h); }
+  function drawXpBar(){ var pad=6,h=10,x=pad,y=pad,w=cv.width-pad*2,need=(player.lvl<MAX_LVL?xpNeeded(player.lvl):1),ratio=(player.lvl<MAX_LVL?Math.max(0,Math.min(1,player.exp/need)):1); ctx.fillStyle='rgba(11,18,36,.66)'; ctx.fillRect(x,y,w,h); ctx.fillStyle='#7c3aed'; ctx.fillRect(x,y,w*ratio,h); ctx.strokeStyle='#1f2a44'; ctx.strokeRect(x,y,w,h); ctx.fillStyle='#e5e7eb'; ctx.font='12px system-ui'; ctx.textAlign='left'; ctx.textBaseline='top'; ctx.fillText('LV '+player.lvl+(player.lvl<MAX_LVL?(' — '+Math.floor(ratio*100)+'%'):' — MAX'), x, y+h+2); }
   function flashCircle(tx,ty,color,alpha,r){ var x=tx*TILE+TILE/2,y=ty*TILE+TILE/2; ctx.save(); ctx.globalAlpha=alpha; ctx.fillStyle=color; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); ctx.restore(); }
 
   /* HUD in-canvas */
@@ -854,15 +892,15 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     worldInited.main=false;
     player.hp=player.maxHp; player.x=1; player.y=Math.floor(ROWS/2); player.vx=player.x; player.vy=player.y;
     coins.length=0; potions.length=0; projectiles.length=0; enemies.length=0; lootBags.length=0;
-    player.status.bleed=null;
+    player.status.bleed=null; destMarker=null; pathQueue.length=0;
     dead=false; deathOverlay.classList.add('hidden'); cv.style.filter=''; cv.style.opacity=''; logSys('Respawn effettuato.');
   };
   deathReset.onclick=function(){ location.reload(); };
 
   function capFirst(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : ''; }
   function nameOf(t){ return t && (t.kind ? capFirst(t.kind) : (t.type==='ranged'?'Arciere':'Mostro')); }
-  function updateTargetFrame(){ if(!target || enemies.indexOf(target)===-1){ hideTargetFrame(); return; } var ratio=Math.max(0,Math.min(1,target.hp/target.maxHp)); toast('Target: '+nameOf(target)+' '+Math.round(ratio*100)+'%'); }
-  function hideTargetFrame(){ /* no-op */ }
+  function updateTargetFrame(){ /* minimal */ }
+  function hideTargetFrame(){ /* minimal */ }
 
 })();
 </script>
