@@ -11,13 +11,13 @@ header .muted{color:var(--muted);margin-left:8px}
 header button{background:#26325a;color:#fff;border:1px solid #31406e;border-radius:8px;padding:6px 10px;cursor:pointer}
 header button:hover{filter:brightness(1.05)}
 main{
-  max-width:1400px;
+  max-width: 1400px;
   margin:14px auto;
   padding:12px;
   background:var(--panel);
   border:1px solid var(--stroke);
   border-radius:12px;
-  position:relative;
+  position:relative
 }
 #game{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--stroke);background:#0a1630;image-rendering:pixelated;touch-action:manipulation}
 .help{margin:.6rem 0 0;color:#a1a1aa}
@@ -95,7 +95,7 @@ main{
 .badge{font:700 11px system-ui;color:#93c5fd}
 .eqName{color:#e5e7eb;font-weight:600}
 
-/* Abilità */
+/* Abilità (simil inventario) */
 .abil{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:480px; max-width:95vw;
   background:#0f172a; border:1px solid #1f2a44; border-radius:12px; box-shadow:0 18px 44px rgba(0,0,0,.45); z-index:43}
 .abil-h{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #1f2a44;font-weight:700}
@@ -117,7 +117,7 @@ main{
 .thp>div{height:100%; width:0%; background:#ef4444}
 .thpTxt{font-size:12px; margin-top:4px; color:#e5e7eb}
 
-/* DPS panel */
+/* DPS panel (alto a destra) */
 .dps{position:fixed; right:16px; top:16px; background:rgba(15,23,42,.9); border:1px solid #1f2a44; border-radius:10px; padding:8px 10px; z-index:26}
 .dps .h{font-weight:700; margin-bottom:4px}
 .dps .v{color:#e5e7eb}
@@ -147,7 +147,7 @@ main{
 .picker .grid{display:grid; grid-template-columns:repeat(5,1fr); gap:8px}
 .pickBtn{padding:10px; background:#1e40af; border:1px solid #31406e; color:#fff; border-radius:10px; cursor:pointer}
 
-/* === PATCH: HUD in-canvas → nascondo i FAB esterni === */
+/* HUD in-canvas → nascondo i FAB esterni */
 #btnAttack, #btnUsePotion, #btnLoot, #atkCdCanvas { display:none !important; }
 
 /* Game Over overlay */
