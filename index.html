@@ -3,9 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Drakoria — HUD-5 (inline)</title>
-
-  <!-- ===== CSS INLINE ===== -->
+  <title>Drakoria — HUD-5 (single-file)</title>
   <style>
   :root{
     --bg:#0b1224; --panel:#0f172a; --stroke:#1f2a44; --text:#e5e7eb; --muted:#9ca3af;
@@ -19,22 +17,12 @@
   header .muted{color:var(--muted);margin-left:8px}
   header button{background:#26325a;color:#fff;border:1px solid #31406e;border-radius:8px;padding:6px 10px;cursor:pointer}
   header button:hover{filter:brightness(1.05)}
-  main{
-    max-width: 1400px;
-    margin:14px auto;
-    padding:12px;
-    background:var(--panel);
-    border:1px solid var(--stroke);
-    border-radius:12px;
-    position:relative
-  }
+  main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);border:1px solid var(--stroke);border-radius:12px;position:relative}
   #game{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--stroke);background:#0a1630;image-rendering:pixelated;touch-action:manipulation}
   .help{margin:.6rem 0 0;color:#a1a1aa}
   #status{margin-top:8px;color:var(--muted)}
   .fab{position:fixed;bottom:14px;width:56px;height:56px;border-radius:50%;border:1px solid #31406e;background:var(--accent);color:#fff;font-size:24px;line-height:56px;text-align:center;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:20}
-  #btnUsePotion{ right:14px }
-  #btnAttack{ right:82px }
-  #btnLoot{ right:150px; display:none }
+  #btnUsePotion{ right:14px }  #btnAttack{ right:82px }  #btnLoot{ right:150px; display:none }
   #atkCdCanvas{ position:fixed; right:82px; bottom:14px; width:56px; height:56px; z-index:21; pointer-events:none }
   .err{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:#7f1d1d;color:#fff;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;z-index:50;font-weight:600;max-width:90vw;white-space:pre-wrap}
 
@@ -151,7 +139,7 @@
   .picker .grid{display:grid; grid-template-columns:repeat(5,1fr); gap:8px}
   .pickBtn{padding:10px; background:#1e40af; border:1px solid #31406e; color:#fff; border-radius:10px; cursor:pointer}
 
-  /* HUD in-canvas → nascondo i FAB esterni */
+  /* HUD in-canvas → nascondo FAB esterni */
   #btnAttack, #btnUsePotion, #btnLoot, #atkCdCanvas { display:none !important; }
 
   /* Game Over overlay */
@@ -168,10 +156,10 @@
   <div><strong>Drakoria</strong> <span class="muted">core</span></div>
   <div>
     <button id="btnQuest">Quest</button>
-    <!-- (rimosso) <button id="btnMini">Mini-mappa</button> -->
     <button id="btnAbilities">Abilità</button>
     <button id="btnInventory">Inventario</button>
     <button id="btnLog">Log</button>
+    <button id="btnPause">Pause</button>
     <button id="btnSave">Save</button>
     <button id="btnLoad">Load</button>
     <button id="btnReset">Reset</button>
@@ -181,9 +169,9 @@
 <main>
   <canvas id="game" width="960" height="576" aria-label="Gioco"></canvas>
   <p class="help">
-    Tap per muoverti • tap su un <b>nemico</b> per selezionarlo (Target Frame) • <b>doppio tap</b> per auto-inseguire •
+    Tap per muoverti • tap su un <b>nemico</b> per target • <b>doppio tap</b> per auto-inseguire •
     <b>🗡️</b> / SPAZIO attacca • Abilità da <b>Abilità</b> • Entra su un <b>sacco</b> per loot.  
-    Dall’<b>Inventario</b> → schede stile NosTale, e bottone <b>→ Barra</b> per assegnare ai numeri 1–5.
+    Mini-mappa sempre visibile in alto a sinistra.
   </p>
   <div id="status"></div>
 </main>
@@ -199,8 +187,6 @@
   <div class="row"><div class="name" id="castName">—</div><div id="castTime">—</div></div>
   <div class="bar"><div id="castBar"></div></div>
 </div>
-
-<!-- (rimosso il pannello/minicanvas) -->
 
 <!-- Hotbar -->
 <div class="hotbar" id="hotbar">
@@ -291,16 +277,17 @@
 <div id="deathOverlay" class="death hidden" role="dialog" aria-modal="true" aria-label="Game Over">
   <div class="death-box">
     <div class="death-title">Sei morto</div>
-    <div class="death-sub">Usa <b>Load</b> per riprendere dall'ultimo salvataggio oppure <b>Reset</b> per ricominciare.</div>
+    <div class="death-sub">Usa <b>Respawn</b> per rinascere allo spawn, <b>Load</b> per riprendere dall'ultimo salvataggio oppure <b>Reset</b> per ricominciare.</div>
     <div class="death-actions">
+      <button id="deathRespawn" class="btn">Respawn</button>
       <button id="deathLoad" class="btn">Load</button>
       <button id="deathReset" class="btn">Reset</button>
     </div>
   </div>
 </div>
 
-<!-- ===== JS INLINE ===== -->
 <script>
+/* ===== Drakoria — BUILD HUD-5 (single-file) ===== */
 (function(){
   var BUILD='HUD-5';
   var SAVE_KEY='save_xrq1_inv';
@@ -323,12 +310,11 @@
   var btnSave=document.getElementById('btnSave'), btnLoad=document.getElementById('btnLoad'), btnReset=document.getElementById('btnReset');
   var btnQuest=document.getElementById('btnQuest'), btnQuestClose=document.getElementById('btnQuestClose');
   var questPanel=document.getElementById('questPanel'), questBody=document.getElementById('questBody');
-  // [rimosso] btnMini/miniWrap/mini canvas esterno
   var btnInventory=document.getElementById('btnInventory'), invWin=document.getElementById('invWin'), invClose=document.getElementById('invClose');
   var invTabs=document.getElementById('invTabs'), invGrid=document.getElementById('invGrid');
   var eqWeaponName=document.getElementById('eqWeaponName'), eqArmorName=document.getElementById('eqArmorName');
   var btnUnequipWeapon=document.getElementById('btnUnequipWeapon'), btnUnequipArmor=document.getElementById('btnUnequipArmor');
-  var potCntEl=document.getElementById('cntPot');
+  var slot1=document.getElementById('slot1'), potCntEl=document.getElementById('cntPot');
   var slotPicker=document.getElementById('slotPicker');
   var errBox=document.getElementById('errBox');
   var atkCdCanvas = document.getElementById('atkCdCanvas');
@@ -336,36 +322,16 @@
   var lootWin=document.getElementById('lootWin'), lootBody=document.getElementById('lootBody'), lootClose=document.getElementById('lootClose'), lootTakeAll=document.getElementById('lootTakeAll');
   var btnLoot = document.getElementById('btnLoot');
   var btnLog=document.getElementById('btnLog'), logPanel=document.getElementById('logPanel'), logBody=document.getElementById('logBody'), btnLogClose=document.getElementById('btnLogClose');
-  
-  // --- Combat Log helpers (FIX) ---
-var logLines=[];
-function pushLog(html, cls){
-  try{
-    var t=new Date(), hh=String(t.getHours()).padStart(2,'0'), mm=String(t.getMinutes()).padStart(2,'0'), ss=String(t.getSeconds()).padStart(2,'0');
-    logLines.push('<div class="line '+(cls||'')+'">['+hh+':'+mm+':'+ss+'] '+html+'</div>');
-    if(logLines.length>80) logLines.shift();
-    if(logBody){
-      logBody.innerHTML = logLines.join('');
-      logBody.scrollTop = logBody.scrollHeight;
-    }
-  }catch(_){}
-}
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, function(m){
-    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]);
-  });
-}
-function logDmg(msg){ pushLog(escapeHtml(msg), 'dmg'); }
-function logHeal(msg){ pushLog(escapeHtml(msg), 'heal'); }
-function logLoot(msg){ pushLog(escapeHtml(msg), 'loot'); }
-function logSys(msg){ pushLog(escapeHtml(msg), 'sys'); }
+  var btnPause = document.getElementById('btnPause');
 
-  // === GAME OVER OVERLAY ===
-  var deathOverlay=null, deathLoad=null, deathReset=null;
+  // === GAME OVER OVERLAY (agganci) ===
+  var deathOverlay=null, deathLoad=null, deathReset=null, deathRespawn=null;
   function wireDeathOverlay(){
     deathOverlay = document.getElementById('deathOverlay');
     deathLoad    = document.getElementById('deathLoad');
     deathReset   = document.getElementById('deathReset');
+    deathRespawn = document.getElementById('deathRespawn');
+
     if (deathLoad && !deathLoad.__wired){
       deathLoad.addEventListener('click', function(){ btnLoad.click(); }, false);
       deathLoad.__wired = true;
@@ -373,6 +339,10 @@ function logSys(msg){ pushLog(escapeHtml(msg), 'sys'); }
     if (deathReset && !deathReset.__wired){
       deathReset.addEventListener('click', function(){ btnReset.click(); }, false);
       deathReset.__wired = true;
+    }
+    if (deathRespawn && !deathRespawn.__wired){
+      deathRespawn.addEventListener('click', quickRespawn, false);
+      deathRespawn.__wired = true;
     }
   }
   wireDeathOverlay();
@@ -400,6 +370,29 @@ function logSys(msg){ pushLog(escapeHtml(msg), 'sys'); }
     document.getElementById('slotCap4'),
     document.getElementById('slotCap5')
   ];
+
+  // --- Combat Log helpers (presenti qui per evitare errori logSys) ---
+  var logLines=[];
+  function pushLog(html, cls){
+    try{
+      var t=new Date(), hh=String(t.getHours()).padStart(2,'0'), mm=String(t.getMinutes()).padStart(2,'0'), ss=String(t.getSeconds()).padStart(2,'0');
+      logLines.push('<div class="line '+(cls||'')+'">['+hh+':'+mm+':'+ss+'] '+html+'</div>');
+      if(logLines.length>80) logLines.shift();
+      if(logBody){
+        logBody.innerHTML = logLines.join('');
+        logBody.scrollTop = logBody.scrollHeight;
+      }
+    }catch(_){}
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(m){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]);
+    });
+  }
+  function logDmg(msg){ pushLog(escapeHtml(msg), 'dmg'); }
+  function logHeal(msg){ pushLog(escapeHtml(msg), 'heal'); }
+  function logLoot(msg){ pushLog(escapeHtml(msg), 'loot'); }
+  function logSys(msg){ pushLog(escapeHtml(msg), 'sys'); }
 
   function panic(where, e){
     errBox.style.display='block';
@@ -444,6 +437,9 @@ function updateTweens(){
     var lootSuppress = { id:null, until:0 };
     function bagKey(b){ return b.x+','+b.y; }
     var teleportGuardUntil = 0;
+
+    var paused = false;
+    var lastDir = { dx:0, dy:-1 }; // direzione iniziale (su) per mini-mappa
 
     // Inventario & equip
 function refreshEquipUi(){
@@ -697,7 +693,7 @@ function applyItem(it){
         projectiles.length = 0;
         enemies.length = 0;
       } else if (WORLD.current === 'main' && enemies.length === 0){
-        enemies.push(makeSlime(COLS-2, ROWS-2));
+        createPatrolGroup('melee', 3, COLS-5, ROWS-4, 2);
         enemies.push(makeArcher(COLS-4, 2));
       }
 
@@ -705,11 +701,20 @@ function applyItem(it){
       teleportGuardUntil = performance.now() + 450;
 
       logSys('Teletrasporto: ' + (WORLD.current==='spawn'?'Spawn':'Main'));
-      draw(); drawMini(); // drawMini ora è no-op; la mini vera è in overlay
+      draw(); drawMiniOverlay();
     }
 
     // OGGETTI + PROIETTILI
     var coins=[], potions=[], projectiles=[];
+    var respawnQueue = [];
+    function randEmptyFarFromPlayer(minD){
+      minD = minD || 6;
+      for (var tries=0; tries<300; tries++){
+        var p = randEmpty();
+        if (chebyshev(p, player) >= minD) return p;
+      }
+      return randEmpty();
+    }
 
     // inizializza la mappa iniziale
     var initRes = buildMap('spawn');
@@ -723,7 +728,7 @@ function applyItem(it){
 
     // HUD: danni fluttuanti
     var dmgTexts=[];
-    var lastDmgTick = performance.now(); // <<< per svanire sempre
+    var lastAnimTs = performance.now();
 
     // XP / LEVEL
     var MAX_LVL=99;
@@ -832,7 +837,7 @@ function applyItem(it){
     }
 
     // INPUT
-    var pathQueue=[];
+    var pathQueue=[], lastTapTs=0;
     function canvasToTile(ev){
       var r=cv.getBoundingClientRect(), t=ev.touches&&ev.touches[0]; var cx=t?t.clientX:ev.clientX, cy=t?t.clientY:ev.clientY;
       var sx=(cx-r.left)*(cv.width/r.width), sy=(cy-r.top)*(cv.height/r.height);
@@ -844,7 +849,7 @@ function applyItem(it){
 
     function onCanvasTap(ev){
       try{
-        if (dead) return;
+        if (dead || paused) return;
         ev.preventDefault();
         if(isCasting) cancelCast('Mossa durante il cast');
         const m = canvasToTile(ev);
@@ -884,10 +889,16 @@ function applyItem(it){
           const tryFirst = (Math.abs(m.tx - player.x) >= Math.abs(m.ty - player.y))
                            ? [{x:player.x+dx, y:player.y},{x:player.x, y:player.y+dy}]
                            : [{x:player.x, y:player.y+dy},{x:player.x+dx, y:player.y}];
+          let stepped=false;
           for(const nxt of tryFirst){
             if(inside(nxt.x,nxt.y) && walkable(nxt.x,nxt.y)){
-              pathQueue = [nxt]; break;
+              pathQueue = [nxt];
+              stepped=true;
+              break;
             }
+          }
+          if(!stepped){
+            statusEl.textContent = `[${BUILD}] nessun percorso (blocco/portale davanti)`;
           }
         }
 
@@ -900,6 +911,7 @@ function applyItem(it){
         drawAtkCooldown();
         updateTargetFrame();
         updateDpsPanel();
+
       }catch(e){ panic('input', e); }
     }
     cv.addEventListener('pointerup', onCanvasTap, {passive:false});
@@ -930,13 +942,12 @@ function applyItem(it){
     btnUsePotion.addEventListener('click', usePotion, false);
     btnUsePotion.addEventListener('touchend', function(e){ e.preventDefault(); usePotion(); }, false);
 
-    // (rimosso) bottone mini-mappa
-
-    // Inventario
-    btnInventory.onclick = function(){ invWin.classList.toggle('hidden'); renderTabs(); renderInventory(); };
-    invClose.onclick = function(){ invWin.classList.add('hidden'); };
-    btnUnequipWeapon.addEventListener('click', function(){ unequip('weapon'); }, false);
-    btnUnequipArmor .addEventListener('click', function(){ unequip('armor');  }, false);
+    // Pause
+    btnPause.addEventListener('click', function(){
+      paused = !paused;
+      btnPause.textContent = paused ? 'Resume' : 'Pause';
+      logSys(paused ? 'Gioco in pausa' : 'Ripresa');
+    }, false);
 
     // Abilità
     btnAbilities.onclick = function(){ abilWin.classList.toggle('hidden'); renderAbilities(); };
@@ -951,20 +962,16 @@ function applyItem(it){
       var px=tx*TILE+TILE/2, py=ty*TILE+TILE/2-28;
       dmgTexts.push({x:px,y:py,txt:txt,color:color,ttl:700,vy:-0.04});
     }
-    function updateDmgTexts(){ // <<< ora basato su delta tempo reale
-      var now = performance.now();
-      var dt = now - (lastDmgTick || now);
-      lastDmgTick = now;
+    function updateDmgTexts(dt){
       for(var i=dmgTexts.length-1;i>=0;i--){
-        var d=dmgTexts[i];
-        d.ttl-=dt; d.y+=d.vy*dt;
-        if(d.ttl<=0) dmgTexts.splice(i,1);
+        var d=dmgTexts[i]; d.ttl-=dt; d.y+=d.vy*dt; if(d.ttl<=0) dmgTexts.splice(i,1);
       }
     }
     function drawDmgTexts(){
       for(var i=0;i<dmgTexts.length;i++){
         var d=dmgTexts[i]; var a=Math.max(0,Math.min(1,d.ttl/700));
-        ctx.save(); ctx.globalAlpha=a; ctx.fillStyle=d.color; ctx.font='bold 16px system-ui'; ctx.textAlign='center'; ctx.fillText(d.txt,d.x,d.y); ctx.restore();
+        ctx.save(); ctx.globalAlpha=a; ctx.fillStyle=d.color; ctx.font='bold 16px system-ui'; ctx.textAlign='center';
+        ctx.fillText(d.txt,d.x,d.y); ctx.restore();
       }
     }
 
@@ -1002,9 +1009,9 @@ function applyItem(it){
         gainXP(t.type==='ranged'?25:20);
         logSys(nameOf(t)+' è stato sconfitto.');
         enemies.splice(enemies.indexOf(t),1);
-        var s=randEmpty(); enemies.push(t.type==='ranged' ? makeArcher(s.x,s.y) : makeSlime(s.x,s.y));
+        respawnQueue.push({ kind: (t.type==='ranged' ? 'ranged' : 'melee'), at: performance.now() + rndInt(1500,3500) });
       }
-      draw();
+      draw(); drawMiniOverlay();
     }
 
     function takePlayerDamage(amount, label){
@@ -1020,11 +1027,11 @@ function applyItem(it){
         autoChase = false;
         pathQueue = [];
         target = null;
-        if (typeof hideTargetFrame === 'function') hideTargetFrame();
+        hideTargetFrame();
         toast('Sei morto!');
         cv.style.filter = 'grayscale(1)';
         cv.style.opacity = '0.6';
-        if (typeof wireDeathOverlay === 'function') wireDeathOverlay();
+        wireDeathOverlay();
         if (deathOverlay) deathOverlay.classList.remove('hidden');
       }
     }
@@ -1117,7 +1124,7 @@ function applyItem(it){
       }else{
         renderLoot(bag);
       }
-      draw(); updateHotbarCounts();
+      draw(); drawMiniOverlay(); updateHotbarCounts();
     }
     function openLootIfOnBag(){
       var bag = getBagAt(player.x, player.y);
@@ -1142,7 +1149,7 @@ function applyItem(it){
         if(emptied){ lootBags.splice(lootBags.indexOf(bag),1); btnLoot.style.display='none'; }
         else{ renderLoot(bag); lootWin.classList.remove('hidden'); }
 
-        updateHotbarCounts(); draw();
+        updateHotbarCounts(); draw(); drawMiniOverlay();
         if(coinsGained||potsGained){
           toast('Raccolto: '+(coinsGained?('🪙 x'+coinsGained+' '):'')+(potsGained?('🍵 x'+potsGained):''));
           if(coinsGained) logLoot('Monete +'+coinsGained);
@@ -1167,7 +1174,7 @@ function applyItem(it){
       lootBags.splice(lootBags.indexOf(bag),1);
       lootWin.classList.add('hidden');
       btnLoot.style.display='none';
-      updateHotbarCounts(); draw();
+      updateHotbarCounts(); draw(); drawMiniOverlay();
     }, false);
     function autoPickupCommons(bag){
       var keep=[], coinsGained=0, potsGained=0;
@@ -1243,15 +1250,16 @@ function applyItem(it){
             trySpawnLootBag(e.x,e.y, e.kind||e.type);
             gainXP(e.type==='ranged'?25:20);
             enemies.splice(i,1);
+            respawnQueue.push({ kind: (e.type==='ranged' ? 'ranged' : 'melee'), at: performance.now() + rndInt(1500,3500) });
           }
         }
       }
       if(total>0){ recordDPS(total); logDmg('Ondata Arcana colpisce '+hits+' nemici per '+total+' danni totali.'); }
-      draw(); updateTargetFrame();
+      draw(); drawMiniOverlay(); updateTargetFrame();
     }
 
     // SAVE/LOAD/RESET
-    btnSave.addEventListener('click', function(){
+    function doSave(silent){
       try{
         var now=performance.now();
         var bags=lootBags.map(function(b){
@@ -1265,9 +1273,11 @@ function applyItem(it){
           world: WORLD.current
         }));
         localStorage.setItem(QUEST_KEY, JSON.stringify({currentQuest:currentQuest,quests:quests}));
-        toast('Salvato.');
-      }catch(e){ panic('save',e); }
-    }, false);
+        if(!silent) toast('Salvato.');
+        return true;
+      }catch(e){ if(!silent) panic('save',e); return false; }
+    }
+    btnSave.addEventListener('click', function(){ doSave(false); }, false);
 
     btnLoad.addEventListener('click', function(){ try{
       var raw=localStorage.getItem(SAVE_KEY); if(!raw) return alert('Nessun salvataggio.');
@@ -1305,8 +1315,6 @@ function applyItem(it){
       }
 
       recomputeStats(false);
-      // >>> Respawn con vita piena
-      player.hp = player.maxHp;
 
       var qd = localStorage.getItem(QUEST_KEY);
       if(qd){
@@ -1323,9 +1331,11 @@ function applyItem(it){
       renderQuest();
       updateHotbarCounts();
       draw();
-      if (typeof renderInventoryIfOpen === 'function') renderInventoryIfOpen();
+      drawMiniOverlay();
+      renderInventoryIfOpen();
       updateTargetFrame();
       updateDpsPanel();
+      renderAbilities();
 
       dead = false;
       cv.style.filter = '';
@@ -1338,11 +1348,40 @@ function applyItem(it){
 
     btnReset.addEventListener('click', function(){ location.reload(); }, false);
 
+    // --- Auto-save ogni 20s e quando la pagina viene nascosta/chiusa
+    setInterval(function(){ if(!dead) doSave(true); }, 20000);
+    window.addEventListener('pagehide', function(){ doSave(true); }, false);
+    document.addEventListener('visibilitychange', function(){
+      if(document.visibilityState==='hidden'){ doSave(true); }
+    }, false);
+
+    function quickRespawn(){
+      var res = buildMap('spawn');
+      map = res.map; applyTheme(res.themeVars);
+      WORLD.current = 'spawn';
+
+      var pos = findSafeExit('spawn', Math.floor(COLS/2), Math.floor(ROWS/2));
+      player.x = pos.x; player.y = pos.y; player.vx = player.x; player.vy = player.y;
+
+      player.hp = player.maxHp;
+      pathQueue = []; target = null; autoChase = false;
+      projectiles.length = 0;
+
+      dead = false;
+      cv.style.filter = ''; cv.style.opacity = ''; cv.style.pointerEvents = 'auto';
+      if (deathOverlay && deathOverlay.classList) deathOverlay.classList.add('hidden');
+
+      toast('Respawn effettuato.');
+      draw();
+    }
+
     // LOOP
     function isAdjacent(ax,ay,bx,by){ return Math.abs(ax-bx)<=1 && Math.abs(ay-by)<=1; }
 
     function step(){
       try{
+        if (dead || paused) return;
+
         // Cast bar
         if(isCasting && currentCasting){
           var now=performance.now();
@@ -1376,6 +1415,7 @@ function applyItem(it){
             var fx = player.x, fy = player.y;
             player.x = next.x; player.y = next.y;
             startTween(player, fx, fy, player.x, player.y, performance.now());
+            lastDir = { dx: Math.sign(player.x - fx), dy: Math.sign(player.y - fy) };
           } else {
             pathQueue=[];
           }
@@ -1447,29 +1487,51 @@ function applyItem(it){
                   var dmg2=Math.floor(base2*(isCrit2?1.5:1));
                   takePlayerDamage(dmg2, isCrit2?'CRIT -':'-');
                 }
+              } else if (canMove) {
+                // avvicinati se sei troppo lontano ma l'hai "perso di vista"
+                if(chebyshev(e,player)>e.rangeMax || !hasLoS(e.x,e.y,player.x,player.y)){
+                  e.path = bfsToAdjacencySmart(e.x,e.y,player.x,player.y,'ranged') || e.path || [];
+                  tryStepAlongPath(e);
+                }
               }
             }
           } else {
-            // --- comportamento non-aggro: ritorno allo spawn o pattugliamento ---
-            if((e.x!==e.spawnX || e.y!==e.spawnY)){
+            // --- non-aggro: ritorno allo spawn o pattuglia ---
+            if((e.x!==e.spawnX || e.y!==e.spawnY) && !e.groupId){
               if(canMove){
                 if(!e.path || !e.path.length) e.path = bfs(e.x,e.y,e.spawnX,e.spawnY) || [];
                 tryStepAlongPath(e);
               }
             } else {
-              e.mode='idle'; e.path=[];
-              if(canMove && Math.random()<0.35){ // piccola passeggiata
-                var dirs=[[1,0],[-1,0],[0,1],[0,-1]];
-                var r=dirs[(Math.random()*dirs.length)|0];
-                var nx=e.x+r[0], ny=e.y+r[1];
-                var blocked = !inside(nx,ny) || !walkable(nx,ny) || (nx===player.x&&ny===player.y);
-                if(!blocked){
-                  for(var kk=0;kk<enemies.length;kk++){ var o=enemies[kk]; if(o!==e && o.x===nx && o.y===ny){ blocked=true; break; } }
-                }
-                if(!blocked){
-                  var fx=e.x, fy=e.y;
-                  e.x=nx; e.y=ny;
-                  startTween(e, fx, fy, e.x, e.y, performance.now());
+              e.mode='idle';
+              if(canMove){
+                if (e.groupId){
+                  if(!e.patrolTarget || (e.x===e.patrolTarget.x && e.y===e.patrolTarget.y)){
+                    var ax=e.groupAnchor.x, ay=e.groupAnchor.y, rad=e.patrolRadius||2;
+                    var gx=Math.max(0,Math.min(COLS-1, ax + rndInt(-rad,rad)));
+                    var gy=Math.max(0,Math.min(ROWS-1, ay + rndInt(-rad,rad)));
+                    if(walkable(gx,gy)) e.patrolTarget={x:gx,y:gy};
+                  }
+                  if(e.patrolTarget){
+                    e.path = bfs(e.x,e.y,e.patrolTarget.x,e.patrolTarget.y) || [];
+                    tryStepAlongPath(e);
+                  }
+                } else {
+                  // Passeggiata casuale (fallback)
+                  if(Math.random()<0.35){
+                    var dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+                    var rdir=dirs[(Math.random()*dirs.length)|0];
+                    var nx=e.x+rdir[0], ny=e.y+rdir[1];
+                    var blocked = !inside(nx,ny) || !walkable(nx,ny) || (nx===player.x&&ny===player.y);
+                    if(!blocked){
+                      for(var kk=0;kk<enemies.length;kk++){ var o=enemies[kk]; if(o!==e && o.x===nx && o.y===ny){ blocked=true; break; } }
+                    }
+                    if(!blocked){
+                      var fx=e.x, fy=e.y;
+                      e.x=nx; e.y=ny;
+                      startTween(e, fx, fy, e.x, e.y, performance.now());
+                    }
+                  }
                 }
               }
             }
@@ -1491,6 +1553,18 @@ function applyItem(it){
           }
           startTween(pr, pr.x, pr.y, nx, ny, performance.now());
           pr.x=nx; pr.y=ny;
+        }
+
+        // Respawn queue
+        var nowTs = performance.now();
+        for (var rq = respawnQueue.length-1; rq >= 0; rq--){
+          var job = respawnQueue[rq];
+          if (nowTs >= job.at){
+            var s = randEmptyFarFromPlayer(6);
+            var ne = (job.kind==='ranged') ? makeArcher(s.x,s.y) : makeSlime(s.x,s.y);
+            enemies.push(ne);
+            respawnQueue.splice(rq,1);
+          }
         }
 
         // Pickup magnet
@@ -1522,10 +1596,13 @@ function applyItem(it){
     layoutHud();
     setInterval(step,120);
 
-    // Render loop 60fps tween + fade danni + mini overlay
+    // Render loop 60fps tween + danni con dt reale + mini-mappa
     (function animLoop(){
-      updateTweens();
-      updateDmgTexts();         // <<< fade danni ogni frame
+      var now = performance.now();
+      var dt = now - lastAnimTs; lastAnimTs = now;
+
+      if (!paused) updateTweens();
+      updateDmgTexts(dt);
       draw();
       drawAtkCooldown();
       requestAnimationFrame(animLoop);
@@ -1541,9 +1618,8 @@ function applyItem(it){
       }
       drawPortals(ctx, TILE);
 
-      // oggetti
       ctx.fillStyle=getVar('--coin');
-      for(var i=0;i<coins.length;i++){ var c=coins[i]; var cx2=c.x*TILE+TILE/2, cy2=c.y*TILE+TILE/2; ctx.beginPath(); ctx.arc(cx2,cy2,10,0,Math.PI*2); ctx.fill(); }
+      for(var i=0;i<coins.length;i++){ var c=coins[i]; var cx=c.x*TILE+TILE/2, cy=c.y*TILE+TILE/2; ctx.beginPath(); ctx.arc(cx,cy,10,0,Math.PI*2); ctx.fill(); }
 
       for(var k=0;k<potions.length;k++){ var po=potions[k]; var px=po.x*TILE, py=po.y*TILE;
         ctx.fillStyle='#8b5cf6'; ctx.fillRect(px+TILE/2-8,py+TILE/2-14,16,20);
@@ -1552,7 +1628,6 @@ function applyItem(it){
         ctx.fillStyle='#0006'; ctx.beginPath(); ctx.ellipse(px+TILE/2,py+TILE-12,12,4,0,0,Math.PI*2); ctx.fill();
       }
 
-      // sacchi
       var now=performance.now();
       for(var lb=0; lb<lootBags.length; lb++){
         var b=lootBags[lb], bx=b.x*TILE, by=b.y*TILE;
@@ -1568,7 +1643,6 @@ function applyItem(it){
         ctx.restore();
       }
 
-      // nemici
       for(var eI=0;eI<enemies.length;eI++){
         var en=enemies[eI];
         var col = (en.type==='ranged') ? '#a855f7' : getVar('--enemy');
@@ -1578,12 +1652,10 @@ function applyItem(it){
         if(target===en){ drawTargetRing(ex,ey); }
       }
 
-      // player
       var pxv = (player.vx!=null?player.vx:player.x), pyv=(player.vy!=null?player.vy:player.y);
       drawActor(pxv,pyv,getVar('--player'));
       drawHpBar(pxv,pyv,player.hp,player.maxHp,false,false);
 
-      // proiettili
       for(var pp=0; pp<projectiles.length; pp++){
         var pr=projectiles[pp];
         var ptx = (pr.vx!=null?pr.vx:pr.x), pty=(pr.vy!=null?pr.vy:pr.y);
@@ -1592,14 +1664,12 @@ function applyItem(it){
 
       drawDmgTexts();
       drawXpBar();
-
-      // minimappa overlay rotonda (in alto a destra)
-      drawMiniOverlay();
-
       statusEl.textContent = 'build: '+BUILD+' | LV '+player.lvl+' | HP '+player.hp+'/'+player.maxHp+' | ATK '+player.atkMin+'–'+player.atkMax+' | coins '+player.coins+' | pots '+player.pots+' | crit '+Math.round(player.critChance*100)+'%';
       ctx.fillStyle='#ffffffcc'; ctx.font='bold 14px system-ui'; ctx.fillText('BUILD '+BUILD, 8, 24);
 
       drawHud();
+      drawMiniOverlay();
+
       function drawHud(){
         drawHudBtn(HUD.atk,  '🗡️', (performance.now()-player.lastAtk)>=player.atkCd);
         drawHudBtn(HUD.pot,  '🍵', player.pots>0);
@@ -1627,37 +1697,72 @@ function applyItem(it){
     }
 
     function drawMiniOverlay(){
-      var r=56, pad=10;
-      var cx=cv.width - r - pad, cy = r + pad; // top-right
+      // mini-mappa rotonda in alto a sinistra (raggio 64)
+      var r = 64, cx = r+10, cy = r+10;
       ctx.save();
-      // clip rotondo
-      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.clip();
-      // fondo
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI*2);
+      ctx.clip();
+
+      // background
       ctx.fillStyle='rgba(15,23,42,.85)';
-      ctx.fillRect(cx-r, cy-r, 2*r, 2*r);
-      // celle
-      var cellW=(2*r)/COLS, cellH=(2*r)/ROWS, x,y;
-      for(y=0;y<ROWS;y++) for(x=0;x<COLS;x++){
+      ctx.fillRect(cx-r, cy-r, r*2, r*2);
+
+      var cellW = (r*2)/COLS;
+      var cellH = (r*2)/ROWS;
+
+      // tiles
+      for(var y=0;y<ROWS;y++) for(var x=0;x<COLS;x++){
         ctx.fillStyle = (map[y][x]===1)?'#2b3b66':'#164e24';
         ctx.fillRect(cx - r + x*cellW, cy - r + y*cellH, cellW, cellH);
       }
-      // loot
+
+      // loot bags
       ctx.fillStyle='#f59e0b';
-      for(var lb=0; lb<lootBags.length; lb++){ var b=lootBags[lb];
+      for(var lb=0; lb<lootBags.length; lb++){
+        var b=lootBags[lb];
         ctx.fillRect(cx - r + b.x*cellW + 1, cy - r + b.y*cellH + 1, 3,3);
       }
-      // coins / potions
-      ctx.fillStyle='#facc15'; for(var i=0;i<coins.length;i++){ var c=coins[i]; ctx.fillRect(cx - r + c.x*cellW + 1, cy - r + c.y*cellH + 1, 2,2); }
-      ctx.fillStyle='#a78bfa'; for(var p=0;p<potions.length;p++){ var po=potions[p]; ctx.fillRect(cx - r + po.x*cellW + 1, cy - r + po.y*cellH + 1, 2,2); }
+
+      // coins
+      ctx.fillStyle='#facc15';
+      for(var i=0;i<coins.length;i++){
+        var c=coins[i];
+        ctx.fillRect(cx - r + c.x*cellW + 1, cy - r + c.y*cellH + 1, 2,2);
+      }
+
+      // potions
+      ctx.fillStyle='#a78bfa';
+      for(var p=0;p<potions.length;p++){
+        var po=potions[p];
+        ctx.fillRect(cx - r + po.x*cellW + 1, cy - r + po.y*cellH + 1, 2,2);
+      }
+
       // enemies
-      for(var eI=0;eI<enemies.length;eI++){ var en=enemies[eI]; ctx.fillStyle=(en.type==='ranged')?'#a855f7':'#ef4444';
+      for(var eI=0;eI<enemies.length;eI++){
+        var en=enemies[eI]; ctx.fillStyle=(en.type==='ranged')?'#a855f7':'#ef4444';
         ctx.fillRect(cx - r + en.x*cellW + 1, cy - r + en.y*cellH + 1, 3,3);
       }
-      // player
-      ctx.fillStyle='#3b82f6'; ctx.fillRect(cx - r + player.x*cellW + 1, cy - r + player.y*cellH + 1, 3,3);
-      ctx.restore();
+
+      // player + freccia direzione
+      ctx.fillStyle='#3b82f6';
+      ctx.fillRect(cx - r + player.x*cellW + 1, cy - r + player.y*cellH + 1, 3,3);
+      var pcx = cx - r + player.x*cellW + 2.5;
+      var pcy = cy - r + player.y*cellH + 2.5;
+      var vx = lastDir.dx || 0, vy = lastDir.dy || -1;
+      var len = 6;
+      ctx.strokeStyle = '#93c5fd';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(pcx, pcy);
+      ctx.lineTo(pcx + vx*len, pcy + vy*len);
+      ctx.stroke();
+
       // bordo
-      ctx.strokeStyle='#1f2a44'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+      ctx.restore();
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI*2);
+      ctx.strokeStyle='#1f2a44'; ctx.lineWidth=2; ctx.stroke();
     }
 
     function drawActor(tx,ty,color){
@@ -1728,11 +1833,7 @@ function applyItem(it){
 
   }catch(e){ panic('boot', e); }
 
-  // Stub per compat: drawMini è ora no-op (overlay integrato)
-  function drawMini(){}
-
 })();
 </script>
-
 </body>
 </html>
