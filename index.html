@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Drakoria — HUD-5</title>
-  <link rel="stylesheet" href="./style.css">
+  <title>Drakoria — HUD-6</title>
+  <link rel="stylesheet" href="css/style.css"><!-- ✅ percorso corretto -->
 </head>
 <body>
 <header>
   <div><strong>Drakoria</strong> <span class="muted">core</span></div>
   <div>
     <button id="btnQuest">Quest</button>
-    <!-- RIMOSSO: Mini-mappa -->
+    <!-- (rimosso il bottone Mini-mappa) -->
     <button id="btnAbilities">Abilità</button>
     <button id="btnInventory">Inventario</button>
     <button id="btnLog">Log</button>
@@ -42,8 +42,6 @@
   <div class="row"><div class="name" id="castName">—</div><div id="castTime">—</div></div>
   <div class="bar"><div id="castBar"></div></div>
 </div>
-
-<!-- RIMOSSA la mini-mappa DOM -->
 
 <!-- Hotbar -->
 <div class="hotbar" id="hotbar">
@@ -134,8 +132,9 @@
 <div id="deathOverlay" class="death hidden" role="dialog" aria-modal="true" aria-label="Game Over">
   <div class="death-box">
     <div class="death-title">Sei morto</div>
-    <div class="death-sub">Usa <b>Load</b> per riprendere dall'ultimo salvataggio oppure <b>Reset</b> per ricominciare.</div>
+    <div class="death-sub">Usa <b>Respawn</b> per rinascere allo spawn, <b>Load</b> per riprendere da un salvataggio, o <b>Reset</b> per ricominciare.</div>
     <div class="death-actions">
+      <button id="deathRespawn" class="btn">Respawn</button>
       <button id="deathLoad" class="btn">Load</button>
       <button id="deathReset" class="btn">Reset</button>
     </div>
@@ -143,6 +142,5 @@
 </div>
 
 <!-- JS -->
-<script src="./game.js"></script>
+<script src="js/game.js"></script><!-- ✅ percorso corretto -->
 </body>
-</html>
