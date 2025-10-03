@@ -4,7 +4,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Drakoria — HUD-5</title>
-  <!-- CSS nella stessa cartella della pagina -->
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -12,7 +11,7 @@
   <div><strong>Drakoria</strong> <span class="muted">core</span></div>
   <div>
     <button id="btnQuest">Quest</button>
-    <button id="btnMini">Mini-mappa</button>
+    <!-- RIMOSSO: Mini-mappa -->
     <button id="btnAbilities">Abilità</button>
     <button id="btnInventory">Inventario</button>
     <button id="btnLog">Log</button>
@@ -44,8 +43,7 @@
   <div class="bar"><div id="castBar"></div></div>
 </div>
 
-<!-- Mini mappa -->
-<div id="miniWrap" class="hidden"><canvas id="mini" width="80" height="48" aria-label="Mini mappa"></canvas></div>
+<!-- RIMOSSA la mini-mappa DOM -->
 
 <!-- Hotbar -->
 <div class="hotbar" id="hotbar">
@@ -144,7 +142,7 @@
   </div>
 </div>
 
-<!-- JS nella stessa cartella della pagina -->
+<!-- JS -->
 <script src="./game.js"></script>
 </body>
 </html>
