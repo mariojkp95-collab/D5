@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Drakoria — Maestro + Equip + Bleed + Dash + Skillshot</title>
+<title>Drakoria — Maestro + Equip Drop</title>
 <style>
 :root{
   --bg:#0b1224; --panel:#0f172a; --stroke:#1f2a44; --text:#e5e7eb; --muted:#9ca3af;
@@ -21,13 +21,18 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 .help{margin:.6rem 0 0;color:#a1a1aa}
 #status{margin-top:8px;color:var(--muted)}
 .err{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:#7f1d1d;color:#fff;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;z-index:50;font-weight:600;max-width:90vw;white-space:pre-wrap;display:none}
-.log{position:fixed; left:16px; bottom:16px; width:300px; max-width:80vw;background:rgba(15,23,42,.9); border:1px solid #1f2a44; border-radius:10px; padding:8px 10px; z-index:26}
+
+/* Log */
+.log{position:fixed; left:16px; bottom:16px; width:300px; max-width:80vw;
+  background:rgba(15,23,42,.9); border:1px solid #1f2a44; border-radius:10px; padding:8px 10px; z-index:26}
 .log .h{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-weight:700}
 .log .b{max-height:160px; overflow:auto; font:12px/1.3 system-ui}
 .log .line{margin:2px 0}
 .log .dmg{color:#fca5a5}
 .log .heal{color:#86efac}
 .log .sys{color:#93c5fd}
+
+/* Game Over */
 .death{position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.45); z-index:60}
 .death.hidden{display:none}
 .death-box{background:#0f172a; border:1px solid #1f2a44; padding:14px; border-radius:12px; width:min(420px,92vw); box-shadow:0 18px 44px rgba(0,0,0,.55)}
@@ -36,7 +41,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 .death-actions{display:flex; gap:8px; justify-content:flex-end}
 .btn{border:1px solid #31406e;background:#2563eb;color:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}
 .btn:disabled{background:#1f2a44;color:#9aa0ad;cursor:not-allowed}
-.char{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:560px; max-width:95vw;background:#0f172a; border:1px solid #1f2a44; border-radius:12px; box-shadow:0 18px 44px rgba(0,0,0,.45); z-index:46}
+
+/* Character (stats) */
+.char{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:560px; max-width:95vw;
+     background:#0f172a; border:1px solid #1f2a44; border-radius:12px; box-shadow:0 18px 44px rgba(0,0,0,.45); z-index:46}
 .char-h{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #1f2a44;font-weight:700}
 .char-x{width:32px;height:26px;border-radius:6px;border:1px solid #31406e;background:#26325a;color:#fff;cursor:pointer}
 .char-b{padding:12px}
@@ -46,7 +54,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 .stat .v{font-weight:700}
 .hidden{display:none}
 .subtle{color:#9ca3af;font-size:12px}
-.npc{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:640px; max-width:96vw;background:#0f172a; border:1px solid #1f2a44; border-radius:12px; box-shadow:0 18px 44px rgba(0,0,0,.45); z-index:47}
+
+/* Maestro panel */
+.npc{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:640px; max-width:96vw;
+  background:#0f172a; border:1px solid #1f2a44; border-radius:12px; box-shadow:0 18px 44px rgba(0,0,0,.45); z-index:47}
 .npc-h{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #1f2a44;font-weight:800}
 .npc-x{width:32px;height:26px;border-radius:6px;border:1px solid #31406e;background:#26325a;color:#fff;cursor:pointer}
 .npc-b{padding:12px}
@@ -55,6 +66,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 .npc-card h4{margin:0 0 6px 0}
 .npc-li{margin:0 0 8px 0}
 .npc-li b{color:#e5e7eb}
+
+/* Toast + Drop card */
 .toast{position:fixed; left:50%; bottom:84px; transform:translateX(-50%); background:rgba(15,23,42,.9); border:1px solid #1f2a44; color:#e5e7eb; padding:6px 10px; border-radius:10px; z-index:55; display:none}
 .dropcard{position:fixed; left:50%; bottom:140px; transform:translateX(-50%); background:#0b1224; border:1px solid #2a355c; color:#e5e7eb; padding:10px 12px; border-radius:12px; z-index:56; display:none; min-width:260px}
 .dropcard .r{font-weight:800}
@@ -75,7 +88,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 
 <main>
   <canvas id="game" width="1344" height="768" aria-label="Gioco"></canvas>
-  <p class="help">Tap per muoverti • tap su un nemico per target • doppio tap/press prolungato per auto-inseguire • SPAZIO/🗡️ attacca • F/⚡ dash • Q/🎯 skillshot.</p>
+  <p class="help">
+    Tap per muoverti • tap su un nemico per target • doppio tap/press prolungato per auto-inseguire • SPAZIO/🗡️ attacca.  
+    Portale viola tra Spawn ↔ Main. Parla con il <b>Maestro</b> nello Spawn per info sulle Stat. Premi <b>F</b> per <b>Dash</b> e <b>Q</b> per la <b>Skillshot</b>.
+  </p>
   <div id="status"></div>
 </main>
 
@@ -84,6 +100,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 <div id="toast" class="toast"></div>
 <div id="dropCard" class="dropcard"></div>
 
+<!-- Game Over -->
 <div id="deathOverlay" class="death hidden" role="dialog" aria-modal="true" aria-label="Game Over">
   <div class="death-box">
     <div class="death-title">Sei morto</div>
@@ -95,6 +112,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   </div>
 </div>
 
+<!-- Character (stats quick) -->
 <section id="charWin" class="char hidden" role="dialog" aria-modal="true" aria-label="Personaggio">
   <div class="char-h"><span>Personaggio</span><button id="charClose" class="char-x">×</button></div>
   <div class="char-b">
@@ -104,6 +122,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   </div>
 </section>
 
+<!-- Maestro (stat tutorial) -->
 <section id="npcWin" class="npc hidden" role="dialog" aria-modal="true" aria-label="Maestro">
   <div class="npc-h"><span>Maestro</span><button id="npcClose" class="npc-x">×</button></div>
   <div class="npc-b">
@@ -111,18 +130,18 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       <div class="npc-card">
         <h4>Offensive</h4>
         <p class="npc-li"><b>ATK Min/Max</b> — da arma + bonus.</p>
-        <p class="npc-li"><b>Velocità Attacco %</b> — riduce il CD.</p>
+        <p class="npc-li"><b>Velocità Attacco %</b> — riduce il CD: <br><span class="subtle">atkCdEff = max(180ms, base * (1 - atkSpeed))</span></p>
         <p class="npc-li"><b>Crit Chance %</b> — base + Luck.</p>
-        <p class="npc-li"><b>Crit Damage %</b> — danno critico.</p>
+        <p class="npc-li"><b>Crit Damage %</b> — danno critico: <br><span class="subtle">dmgCrit = base * (1 + critDmg)</span></p>
         <p class="npc-li"><b>Luck %</b> — aumenta Crit Chance.</p>
       </div>
       <div class="npc-card">
         <h4>Difensive</h4>
         <p class="npc-li"><b>HP Max</b> — da armatura + bonus.</p>
-        <p class="npc-li"><b>Difesa</b> — sottrae danno.</p>
-        <p class="npc-li"><b>Mitigazione %</b> — riduce il resto (cap 60%).</p>
-        <p class="npc-li"><b>Res. Proiettili %</b> — colpi arcieri.</p>
-        <p class="npc-li"><b>Res. Bleed %</b> — riduce sanguinamento (cap 70%).</p>
+        <p class="npc-li"><b>Difesa</b> — sottrae danno: <br><span class="subtle">dmg = max(0, dmg - defense)</span></p>
+        <p class="npc-li"><b>Mitigazione %</b> — riduce il resto: <br><span class="subtle">dmg = dmg * (1 - mitigation)</span> (cap 60%)</p>
+        <p class="npc-li"><b>Res. Proiettili %</b> — solo colpi arcieri: <br><span class="subtle">dopo miti</span></p>
+        <p class="npc-li"><b>Res. Bleed %</b> — riduce danni/durata sanguinamento (cap 70%).</p>
       </div>
     </div>
     <hr style="border:none;border-top:1px solid #1f2a44;margin:12px 0">
@@ -132,11 +151,37 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 
 <script>
 (function(){
-  const BUILD='MAESTRO+EQUIP+BLEED+DASH+SKILLSHOT';
+  const BUILD='MAESTRO+EQUIP+BLEED+DASH+SKILL+SFX';
   const SAVE_KEY='save_maestro_equip';
-  const SKILLSHOT_HOMING=true;
-
   const cv=document.getElementById('game'); const ctx=cv.getContext('2d');
+
+  // --- SFX (WebAudio) ---
+  const AC = (window.AudioContext||window.webkitAudioContext)
+    ? new (window.AudioContext||window.webkitAudioContext)() : null;
+  function sfx(type){
+    if(!AC) return;
+    const o = AC.createOscillator();
+    const g = AC.createGain();
+    o.connect(g); g.connect(AC.destination);
+    let f1=440, f2=440, dur=0.12;
+    switch(type){
+      case 'cast': f1=660; f2=440; dur=0.16; break;
+      case 'hit':  f1=260; f2=220; dur=0.08; break;
+      case 'crit': f1=880; f2=660; dur=0.14; break;
+      case 'hurt': f1=160; f2=120; dur=0.10; break;
+      case 'dash': f1=360; f2=280; dur=0.10; break;
+    }
+    const t0 = AC.currentTime;
+    o.frequency.setValueAtTime(f1, t0);
+    o.frequency.exponentialRampToValueAtTime(f2, t0+dur*0.8);
+    g.gain.setValueAtTime(0.001, t0);
+    g.gain.exponentialRampToValueAtTime(0.12, t0+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+    o.type='triangle';
+    o.start(t0);
+    o.stop(t0+dur+0.02);
+  }
+
   const statusEl=document.getElementById('status');
   const errBox=document.getElementById('errBox');
   const logBody=document.getElementById('logBody');
@@ -158,11 +203,27 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   const npcClose=document.getElementById('npcClose');
   const npcValues=document.getElementById('npcValues');
 
-  function panic(where,e){ errBox.style.display='block'; errBox.textContent='ERRORE '+where+': '+(e&&(e.message||e)); console.error('[PANIC]',where,e); }
-  function toast(msg){ toastEl.textContent=msg; toastEl.style.display='block'; clearTimeout(toastEl.__t); toastEl.__t=setTimeout(()=>toastEl.style.display='none',1200); }
-  function showDropCard(html, ttl){ dropCardEl.innerHTML=html; dropCardEl.style.display='block'; clearTimeout(dropCardEl.__t); dropCardEl.__t=setTimeout(()=>dropCardEl.style.display='none', ttl||1600); }
+  function panic(where,e){
+    errBox.style.display='block';
+    errBox.textContent='ERRORE '+where+': '+(e && (e.message||e));
+    console.error('[PANIC]', where, e);
+  }
+  function toast(msg){
+    toastEl.textContent=msg;
+    toastEl.style.display='block';
+    clearTimeout(toastEl.__t);
+    toastEl.__t=setTimeout(()=>toastEl.style.display='none',1200);
+  }
+  function showDropCard(html, ttl){
+    dropCardEl.innerHTML=html;
+    dropCardEl.style.display='block';
+    clearTimeout(dropCardEl.__t);
+    dropCardEl.__t=setTimeout(()=>dropCardEl.style.display='none', ttl||1600);
+  }
   function logLine(msg,cls){ const t=new Date(); const hh=String(t.getHours()).padStart(2,'0'), mm=String(t.getMinutes()).padStart(2,'0'), ss=String(t.getSeconds()).padStart(2,'0'); logBody.innerHTML+=`<div class="line ${cls||''}">[${hh}:${mm}:${ss}] ${escapeHtml(msg)}</div>`; logBody.scrollTop=logBody.scrollHeight; }
-  function logDmg(m){ logLine(m,'dmg'); } function logHeal(m){ logLine(m,'heal'); } function logSys(m){ logLine(m,'sys'); }
+  function logDmg(m){ logLine(m,'dmg'); }
+  function logHeal(m){ logLine(m,'heal'); }
+  function logSys(m){ logLine(m,'sys'); }
   function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
   const COLS=21, ROWS=12, TILE=64; cv.width=COLS*TILE; cv.height=ROWS*TILE;
@@ -174,7 +235,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function applyTheme(vars){ const root=document.documentElement.style; for(const k in vars) root.setProperty(k, vars[k]); }
   function buildMap(name){
     const m=[]; for(let y=0;y<ROWS;y++){ const row=[]; for(let x=0;x<COLS;x++) row.push(0); m.push(row); }
-    if(name==='main'){ for(let i=0;i<16;i++){ const bx=(Math.random()*COLS|0), by=(Math.random()*ROWS|0); if(isPortalTile('main',bx,by)) continue; m[by][bx]=1; } }
+    if(name==='main'){ for(let i=0;i<16;i++){ const bx=(Math.random()*COLS|0), by=(Math.random() *ROWS|0); if(isPortalTile('main',bx,by)) continue; m[by][bx]=1; } }
     return {map:m, theme:(name==='main')?THEMES.main:THEMES.spawn};
   }
 
@@ -219,17 +280,11 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   let MOVE_MS=110;
   function startTween(o,fx,fy,tx,ty,now){ o.vFromX=fx; o.vFromY=fy; o.vToX=tx; o.vToY=ty; o.vStart=now; o.vEnd=now+MOVE_MS; if(o.vx==null)o.vx=fx; if(o.vy==null)o.vy=fy; }
   function tweenUpdate(o,now){
-    const has=(o&&o.vStart&&o.vEnd&&o.vEnd>o.vStart);
+    if(!o) return; const has=(o.vStart&&o.vEnd&&o.vEnd>o.vStart);
     if(has && now<o.vEnd){ let t=(now-o.vStart)/(o.vEnd-o.vStart); t=t*t*(3-2*t); o.vx=o.vFromX+(o.vToX-o.vFromX)*t; o.vy=o.vFromY+(o.vToY-o.vFromY)*t; }
-    else if(o){ if(o.x!=null) o.vx=o.x; if(o.y!=null) o.vy=o.y; o.vStart=0; o.vEnd=0; }
+    else { if(o.x!=null) o.vx=o.x; if(o.y!=null) o.vy=o.y; o.vStart=0; o.vEnd=0; }
   }
-  function updateTweens(){
-    const now=performance.now();
-    tweenUpdate(player,now);
-    for(let i=0;i<enemies.length;i++) tweenUpdate(enemies[i],now);
-    for(let j=0;j<projectiles.length;j++) tweenUpdate(projectiles[j],now);
-    for(let s=0;s<skillshots.length;s++) tweenUpdate(skillshots[s],now);
-  }
+  function updateTweens(){ const now=performance.now(); tweenUpdate(player,now); for(let i=0;i<enemies.length;i++) tweenUpdate(enemies[i],now); for(let j=0;j<projectiles.length;j++) tweenUpdate(projectiles[j],now); for(let k=0;k<skillshots.length;k++) tweenUpdate(skillshots[k],now); }
 
   const player={
     x:12,y:4,
@@ -251,7 +306,9 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function gainXP(n){
     if(player.lvl>=MAX_LVL) return;
     player.exp+=n;
-    while(player.lvl<MAX_LVL && player.exp>=xpNeeded(player.lvl)){ player.exp-=xpNeeded(player.lvl); levelUp(); }
+    while(player.lvl<MAX_LVL && player.exp>=xpNeeded(player.lvl)){
+      player.exp-=xpNeeded(player.lvl); levelUp();
+    }
     renderCharIfOpen(); renderNpcValues();
   }
   function levelUp(){
@@ -291,7 +348,16 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     renderCharIfOpen(); renderNpcValues();
   }
 
-  let enemies=[], projectiles=[], skillshots=[];
+  // --- Danno scalato arma + livello ---
+  function scaledRoll(minB, maxB){
+    const lvlMul = 1 + (player.lvl-1)*0.03;
+    const wep = equipped?.weapon?.atkBonus|0;
+    const flat = Math.round(minB + (maxB-minB)*Math.random() + 0.8*wep);
+    return Math.max(1, Math.floor(flat * lvlMul));
+  }
+
+  let enemies=[], projectiles=[];
+  let skillshots=[];
   let _eid=1; function giveId(e){ e.id=_eid++; return e; }
   function makeArcher(x,y){
     const e={ kind:'archer', type:'ranged', x,y, spawnX:x, spawnY:y,
@@ -321,7 +387,9 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   }
 
   const NPCS=[];
-  function makeMaestro(x,y){ return { kind:'maestro', x, y, w:1, h:1, name:'Maestro', icon:'🧙‍♂️' }; }
+  function makeMaestro(x,y){
+    return { kind:'maestro', x, y, w:1, h:1, name:'Maestro', icon:'🧙‍♂️' };
+  }
   function ensureSpawnNpcs(){
     if(!NPCS.find(n=>n.kind==='maestro')){
       const mid=ROWS>>1;
@@ -401,8 +469,9 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 
     autoChase=false;
     const p=bfs(player.x,player.y,m.tx,m.ty);
-    if(p && p.length){ pathQueue=p; destMarker={x:m.tx,y:m.ty,ttl:1400}; const step=p[0]; lastMoveDir={dx:Math.sign(step.x-player.x), dy:Math.sign(step.y-player.y)}; }
-    else{
+    if(p && p.length){ pathQueue=p; destMarker={x:m.tx,y:m.ty,ttl:1400};
+      const step=p[0]; lastMoveDir={dx:Math.sign(step.x-player.x), dy:Math.sign(step.y-player.y)};
+    } else {
       const dx=Math.sign(m.tx-player.x), dy=Math.sign(m.ty-player.y);
       const tryFirst=(Math.abs(m.tx-player.x)>=Math.abs(m.ty-player.y))?[{x:player.x+dx,y:player.y},{x:player.x,y:player.y+dy}]:[{x:player.x,y:player.y+dy},{x:player.x+dx,y:player.y}];
       for(let k=0;k<tryFirst.length;k++){ const nxt=tryFirst[k]; if(inside(nxt.x,nxt.y)&&walkable(nxt.x,nxt.y)){ pathQueue=[nxt]; destMarker={x:nxt.x,y:nxt.y,ttl:700}; lastMoveDir={dx:Math.sign(nxt.x-player.x),dy:Math.sign(nxt.y-player.y)}; break; } }
@@ -426,9 +495,35 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     return false;
   }
 
-  const dmgTexts=[]; function addDmgText(tx,ty,txt,color){ const px=tx*TILE+TILE/2, py=ty*TILE+TILE/2-28; dmgTexts.push({x:px,y:py,txt,color,ttl:700,vy:-0.04}); }
-  function updateDmgTexts(dt){ for(let i=dmgTexts.length-1;i>=0;i--){ const d=dmgTexts[i]; d.ttl-=dt; d.y+=d.vy*dt; if(d.ttl<=0) dmgTexts.splice(i,1); } }
-  function drawDmgTexts(){ for(let i=0;i<dmgTexts.length;i++){ const d=dmgTexts[i]; const a=Math.max(0,Math.min(1,d.ttl/700)); ctx.save(); ctx.globalAlpha=a; ctx.fillStyle=d.color; ctx.font='bold 16px system-ui'; ctx.textAlign='center'; ctx.fillText(d.txt,d.x,d.y); ctx.restore(); } }
+  // Danni fluttuanti (crit evidenti)
+  const dmgTexts=[];
+  function addDmgText(tx,ty,txt,color,opts){
+    const px=tx*TILE+TILE/2, py=ty*TILE+TILE/2-28;
+    dmgTexts.push({
+      x:px, y:py, txt:String(txt), color:color||'#fff',
+      ttl: opts?.ttl || 700, vy: opts?.vy ?? -0.04,
+      crit: !!(opts && opts.crit)
+    });
+  }
+  function updateDmgTexts(dt){
+    for(let i=dmgTexts.length-1;i>=0;i--){
+      const d=dmgTexts[i]; d.ttl-=dt; d.y+=d.vy*dt; if(d.ttl<=0) dmgTexts.splice(i,1);
+    }
+  }
+  function drawDmgTexts(){
+    for(let i=0;i<dmgTexts.length;i++){
+      const d=dmgTexts[i]; const a=Math.max(0,Math.min(1,d.ttl/700));
+      ctx.save(); ctx.globalAlpha=a;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      const fontPx = d.crit ? 20 : 16;
+      ctx.font = (d.crit?'900 ':'bold ')+fontPx+'px system-ui';
+      if(d.crit){
+        ctx.lineWidth=3; ctx.strokeStyle='#000a'; ctx.strokeText(d.txt,d.x,d.y);
+      }
+      ctx.fillStyle=d.color; ctx.fillText(d.txt,d.x,d.y);
+      ctx.restore();
+    }
+  }
   function rollCrit(ch){ return Math.random() < ch; }
 
   function pick(arr){ return arr[(Math.random()*arr.length)|0]; }
@@ -538,11 +633,12 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 
   function attackEnemy(t){
     const now=performance.now(); player.lastAtk=now;
-    const base=rndInt(player.atkMin,player.atkMax);
-    const crit=rollCrit(getCritChance()); const mult=crit?getCritMult():1;
-    const dmg=Math.max(0, Math.floor(base*mult));
+    const base = scaledRoll(player.atkMin, player.atkMax);
+    const crit = rollCrit(getCritChance()); const mult=crit?getCritMult():1;
+    const dmg  = Math.max(0, Math.floor(base*mult));
     t.hp=Math.max(0, t.hp-dmg);
-    addDmgText(t.x,t.y,(crit?'CRIT ':'-')+dmg, crit?'#facc15':'#ffd166');
+    addDmgText(t.x,t.y,(crit?'CRIT ':'-')+dmg, crit?'#facc15':'#ffd166', {crit});
+    sfx(crit?'crit':'hit');
     if(t.hp===0){
       if(target===t){ target=null; autoChase=false; }
       logSys('Nemico sconfitto. +25 XP');
@@ -568,6 +664,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     if(performance.now() < player.iFrameUntil) return;
     const dmg=applyDamageReduction(amount,source);
     player.hp=Math.max(0, player.hp-dmg); addDmgText(player.x,player.y,label+dmg,'#ff6b6b');
+    sfx('hurt');
     if(player.hp===0) gameOver();
   }
 
@@ -680,11 +777,13 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 
     const pxv=(player.vx!=null?player.vx:player.x), pyv=(player.vy!=null?player.vy:player.y);
     drawActor(pxv,pyv,getVar('--player')); drawHpBar(pxv,pyv,player.hp,player.maxHp,false,false);
+    drawPlayerDebuffs(pxv,pyv);
 
     for(let p=0;p<projectiles.length;p++){
       const pr=projectiles[p]; const ptx=(pr.vx!=null?pr.vx:pr.x), pty=(pr.vy!=null?pr.vy:pr.y);
       const x=ptx*TILE+TILE/2, y=pty*TILE+TILE/2; ctx.fillStyle='#f87171'; ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
     }
+
     for(let s=0;s<skillshots.length;s++){
       const pr=skillshots[s];
       const ptx=(pr.vx!=null?pr.vx:pr.x), pty=(pr.vy!=null?pr.vy:pr.y);
@@ -752,6 +851,15 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     ctx.fillStyle='#e5e7eb'; ctx.font='12px system-ui';
     ctx.fillText('Maestro', x+TILE/2, y+TILE/2+26);
   }
+  function drawPlayerDebuffs(pxv,pyv){
+    const b=player.status.bleed;
+    if(!b) return;
+    const x=pxv*TILE+TILE/2, y=pyv*TILE+TILE/2-40;
+    ctx.save();
+    ctx.fillStyle='#ef4444';
+    ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
 
   function updateTargetFrame(){}
 
@@ -790,6 +898,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     if(steps===0) return;
     const fx=player.x, fy=player.y; setPlayerPos(nx,ny); startTween(player,fx,fy,nx,ny,now);
     player.lastDash=now; player.iFrameUntil=now+450;
+    sfx('dash');
     toast('Dash'); draw();
   }
 
@@ -804,47 +913,12 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     }
     if(dir.dx===0 && dir.dy===0) dir={dx:1,dy:0};
     const p={ x:player.x, y:player.y, dx:dir.dx, dy:dir.dy, spdTick:0, vx:player.x, vy:player.y,
-              rangeLeft:player.skillRange, min:player.skillMin, max:player.skillMax, homing:SKILLSHOT_HOMING,
-              vStart:0,vEnd:0 };
+              rangeLeft:player.skillRange, min:player.skillMin, max:player.skillMax,
+              vStart:0, vEnd:0 };
     skillshots.push(p);
     player.lastSkill=now;
+    sfx('cast');
     toast('Skillshot');
-  }
-
-  function updateSkillshots(now){
-    for(let si=skillshots.length-1; si>=0; si--){
-      const pr=skillshots[si];
-      if (pr.homing && target){
-        pr.dx = Math.sign(target.x - pr.x) || 0;
-        pr.dy = Math.sign(target.y - pr.y) || 0;
-        if(pr.dx===0 && pr.dy===0) pr.homing=false;
-      }
-      pr.spdTick=(pr.spdTick+1)%1;
-      const nx=pr.x+pr.dx, ny=pr.y+pr.dy;
-      if(!inside(nx,ny) || map[ny][nx]===1){ skillshots.splice(si,1); continue; }
-      let hit=null;
-      for(let i=0;i<enemies.length;i++){ const e=enemies[i]; if(e.x===nx && e.y===ny){ hit=e; break; } }
-      if(hit){
-        const base=rndInt(pr.min, pr.max);
-        const crit=rollCrit(getCritChance());
-        const mult=crit?getCritMult():1;
-        const dmg=Math.max(0, Math.floor(base*mult));
-        hit.hp=Math.max(0, hit.hp-dmg);
-        addDmgText(hit.x,hit.y,(crit?'CRIT ':'')+dmg,'#38bdf8');
-        if(hit.hp===0){
-          if(target===hit){ target=null; autoChase=false; }
-          logSys('Nemico sconfitto. +25 XP');
-          enemies.splice(enemies.indexOf(hit),1);
-          gainXP(25);
-          handleDrop();
-          setTimeout(()=>{ if(WORLD.current==='main'){ const s=randEmpty(); enemies.push(makeArcher(s.x,s.y)); } }, 1000);
-        }
-        skillshots.splice(si,1);
-        continue;
-      }
-      startTween(pr, pr.x, pr.y, nx, ny, now); pr.x=nx; pr.y=ny;
-      pr.rangeLeft--; if(pr.rangeLeft<=0){ skillshots.splice(si,1); continue; }
-    }
   }
 
   let lastStepTs=performance.now();
@@ -935,6 +1009,36 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         startTween(pr, pr.x, pr.y, nx, ny, now); pr.x=nx; pr.y=ny;
       }
 
+      for(let si=skillshots.length-1; si>=0; si--){
+        const pr=skillshots[si];
+        pr.spdTick=(pr.spdTick+1)%1;
+        const nx=pr.x+pr.dx, ny=pr.y+pr.dy;
+        if(!inside(nx,ny) || map[ny][nx]===1){ skillshots.splice(si,1); continue; }
+        let hit=null;
+        for(let i=0;i<enemies.length;i++){ const e=enemies[i]; if(e.x===nx && e.y===ny){ hit=e; break; } }
+        if(hit){
+          const base = scaledRoll(pr.min, pr.max);
+          const crit = rollCrit(getCritChance());
+          const mult = crit ? getCritMult() : 1;
+          const dmg  = Math.max(0, Math.floor(base * mult));
+          hit.hp=Math.max(0, hit.hp-dmg);
+          addDmgText(hit.x,hit.y,(crit?'CRIT ':'')+dmg,'#38bdf8', {crit});
+          sfx(crit?'crit':'hit');
+          if(hit.hp===0){
+            if(target===hit){ target=null; autoChase=false; }
+            logSys('Nemico sconfitto. +25 XP');
+            enemies.splice(enemies.indexOf(hit),1);
+            gainXP(25);
+            handleDrop();
+            setTimeout(()=>{ if(WORLD.current==='main'){ const s=randEmpty(); enemies.push(makeArcher(s.x,s.y)); } }, 1000);
+          }
+          skillshots.splice(si,1);
+          continue;
+        }
+        startTween(pr, pr.x, pr.y, nx, ny, now); pr.x=nx; pr.y=ny;
+        pr.rangeLeft--; if(pr.rangeLeft<=0){ skillshots.splice(si,1); continue; }
+      }
+
       if(autoChase && target && !dead){
         const stillThere = enemies.indexOf(target)!==-1;
         if(!stillThere){ autoChase=false; target=null; }
@@ -949,7 +1053,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         }
       }
 
-      updateSkillshots(now);
       processBleed(now);
       updateDmgTexts(dt);
       if(destMarker){ destMarker.ttl-=dt; if(destMarker.ttl<=0) destMarker=null; }
@@ -1012,7 +1115,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     ];
     npcValues.innerHTML = `<div><b>Valori Attuali</b></div><div class="subtle">${rows.join(' · ')}</div>`;
   }
-  function openMaestro(){ npcWin.classList.remove('hidden'); renderNpcValues(); }
+  function openMaestro(){
+    npcWin.classList.remove('hidden');
+    renderNpcValues();
+  }
 
   const btnSave=document.getElementById('btnSave');
   const btnLoad=document.getElementById('btnLoad');
