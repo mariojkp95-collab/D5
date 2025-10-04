@@ -263,7 +263,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     x:12,y:4,
     baseMaxHp:100, baseAtkMin:6, baseAtkMax:12,
     maxHp:100, hp:100, atkMin:6, atkMax:12,
-    baseCrit:0.10,
+    baseCrit:0.10,lastSkill:0, skillCd:2600, skillRange:8, skillMin:14, skillMax:22,
     coins:0,pots:1,lastAtk:0,atkCd:450,lvl:1,exp:0,
     stats:{ atkSpeed:0.00, critDmg:0.50, luck:0.00, defense:0, mitigation:0.00, projRes:0.00, bleedRes:0.00 },
     status:{ bleed:null },
@@ -322,6 +322,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   }
 
   let enemies=[], projectiles=[];
+  let skillshots=[];
   let _eid=1; function giveId(e){ e.id=_eid++; return e; }
   function makeArcher(x,y){
     const e={ kind:'archer', type:'ranged', x,y, spawnX:x, spawnY:y,
@@ -367,19 +368,24 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     ensureSpawnNpcs();
   })();
 
-  const HUD={ atk:null, pot:null, dash:null, char:null };
+  const HUD={ atk:null, pot:null, dash:null, skill:null, char:null };
+
   function layoutHud(){
-    HUD.atk  = { x: cv.width - 86,  y: cv.height - 86, w: 72, h: 72 };
-    HUD.pot  = { x: cv.width - 166, y: cv.height - 86, w: 72, h: 72 };
-    HUD.dash = { x: cv.width - 246, y: cv.height - 86, w: 72, h: 72 };
-    HUD.char = { x: cv.width - 86,  y: 14,             w: 72, h: 54  };
-  }
+  HUD.atk   = { x: cv.width - 86,  y: cv.height - 86, w: 72, h: 72 };
+  HUD.pot   = { x: cv.width - 166, y: cv.height - 86, w: 72, h: 72 };
+  HUD.dash  = { x: cv.width - 246, y: cv.height - 86, w: 72, h: 72 };
+  HUD.skill = { x: cv.width - 326, y: cv.height - 86, w: 72, h: 72 };
+  HUD.char  = { x: cv.width - 86,  y: 14,             w: 72, h: 54  };
+}
+
   window.addEventListener('resize', layoutHud, false);
   layoutHud();
 
   let target=null, autoChase=false, lastEnemyTapTs=0, lastEnemyTapId=-1;
   let pathQueue=[], holdTimer=null, destMarker=null;
   let dead=false, lastMoveDir={dx:1,dy:0};
+  let lastMoveDir={dx:1,dy:0};
+
 
   btnChar.onclick=()=>{ charWin.classList.toggle('hidden'); renderCharPanel(); };
   charClose.onclick=()=>{ charWin.classList.add('hidden'); };
@@ -419,6 +425,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     if(inRect(m.sx,m.sy,HUD.atk)){ tryAttackAdjacent(); return; }
     if(inRect(m.sx,m.sy,HUD.pot)){ usePotion(); return; }
     if(inRect(m.sx,m.sy,HUD.dash)){ tryDash(); return; }
+    if(inRect(m.sx,m.sy,HUD.skill)){ trySkillshot(); return; }
     if(inRect(m.sx,m.sy,HUD.char)){ charWin.classList.toggle('hidden'); renderCharPanel(); return; }
 
     const npc=getNpcAtScreen(m.sx,m.sy);
@@ -446,7 +453,11 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   cv.addEventListener('pointerdown', onPointerDown, {passive:false});
   cv.addEventListener('pointerup', onPointerUp, {passive:false});
   cv.addEventListener('click', onPointerUp, false);
-  window.addEventListener('keydown', (e)=>{ if(e.code==='Space'||e.key===' ') tryAttackAdjacent(); if(e.code==='KeyF') tryDash(); }, false);
+ window.addEventListener('keydown', (e)=>{
+  if(e.code==='Space'||e.key===' ') tryAttackAdjacent();
+  if(e.code==='KeyF') tryDash();
+  if(e.code==='KeyQ') trySkillshot();
+}, false);
 
   function tryAttackAdjacent(){
     const now=performance.now(); if(now-player.lastAtk<getAtkCd()) return false;
@@ -715,6 +726,15 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     for(let p=0;p<projectiles.length;p++){
       const pr=projectiles[p]; const ptx=(pr.vx!=null?pr.vx:pr.x), pty=(pr.vy!=null?pr.vy:pr.y);
       const x=ptx*TILE+TILE/2, y=pty*TILE+TILE/2; ctx.fillStyle='#f87171'; ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
+}
+      for(let s=0;s<skillshots.length;s++){
+  const pr=skillshots[s];
+  const ptx=(pr.vx!=null?pr.vx:pr.x), pty=(pr.vy!=null?pr.vy:pr.y);
+  const x=ptx*TILE+TILE/2, y=pty*TILE+TILE/2;
+  ctx.fillStyle='#38bdf8';
+  ctx.beginPath(); ctx.arc(x,y,7,0,Math.PI*2); ctx.fill();
+}
+
     }
 
     drawDmgTexts();
@@ -758,18 +778,21 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     ctx.restore();
   }
   function drawHud(){
-    drawHudBtn(HUD.atk, '🗡️', (performance.now()-player.lastAtk)>=getAtkCd());
-    drawHudBtn(HUD.pot, '🍵', player.pots>0);
-    const canDash=(performance.now()-player.lastDash)>=player.dashCd;
-    drawHudBtn(HUD.dash, '⚡', canDash);
-    drawHudBtn(HUD.char, '👤', true);
-    if(destMarker && destMarker.ttl>0){
-      const a=Math.min(1, destMarker.ttl/400);
-      ctx.save(); ctx.globalAlpha=a; ctx.strokeStyle='#93c5fd'; ctx.lineWidth=2;
-      const cx=destMarker.x*TILE+TILE/2, cy=destMarker.y*TILE+TILE/2;
-      ctx.beginPath(); ctx.arc(cx,cy,20,0,Math.PI*2); ctx.stroke(); ctx.restore();
-    }
+  drawHudBtn(HUD.atk,   '🗡️', (performance.now()-player.lastAtk)>=getAtkCd());
+  drawHudBtn(HUD.pot,   '🍵', player.pots>0);
+  const canDash=(performance.now()-player.lastDash)>=player.dashCd;
+  drawHudBtn(HUD.dash,  '⚡', canDash);
+  const canSkill=(performance.now()-player.lastSkill)>=player.skillCd;
+  drawHudBtn(HUD.skill, '🎯', canSkill);
+  drawHudBtn(HUD.char,  '👤', true);
+  if(destMarker && destMarker.ttl>0){
+    const a=Math.min(1, destMarker.ttl/400);
+    ctx.save(); ctx.globalAlpha=a; ctx.strokeStyle='#93c5fd'; ctx.lineWidth=2;
+    const cx=destMarker.x*TILE+TILE/2, cy=destMarker.y*TILE+TILE/2;
+    ctx.beginPath(); ctx.arc(cx,cy,20,0,Math.PI*2); ctx.stroke(); ctx.restore();
   }
+}
+
   function drawNpc(n){
     const x=n.x*TILE, y=n.y*TILE;
     ctx.fillStyle=getVar('--shadow'); ctx.beginPath(); ctx.ellipse(x+TILE/2,y+TILE-10,16,6,0,0,Math.PI*2); ctx.fill();
@@ -839,10 +862,60 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         for(let i=0;i<enemies.length;i++){ const e=enemies[i]; if(e.x===next.x&&e.y===next.y){ blocked=true; break; } }
         if(blocked){ pathQueue.length=0; }
         else{
-          const fx=player.x, fy=player.y; setPlayerPos(next.x,next.y); startTween(player,fx,fy,player.x,player.y,now);
+         const fx=player.x, fy=player.y;
+setPlayerPos(next.x,next.y);
+lastMoveDir={dx:Math.sign(player.x-fx), dy:Math.sign(player.y-fy)};
+startTween(player,fx,fy,player.x,player.y,now);
+
           lastMoveDir={dx:Math.sign(player.x-fx),dy:Math.sign(player.y-fy)};
           pathQueue.shift();
+          for(let si=skillshots.length-1; si>=0; si--){
+  const pr=skillshots[si];
+  pr.spdTick=(pr.spdTick+1)%1; // veloce: 1 tile per tick
+  const nx=pr.x+pr.dx, ny=pr.y+pr.dy;
+  if(!inside(nx,ny) || map[ny][nx]===1){ skillshots.splice(si,1); continue; }
+  let hit=null;
+  for(let i=0;i<enemies.length;i++){ const e=enemies[i]; if(e.x===nx && e.y===ny){ hit=e; break; } }
+  if(hit){
+    const base=rndInt(pr.min, pr.max);
+    const crit=rollCrit(getCritChance());
+    const mult=crit?getCritMult():1;
+    const dmg=Math.max(0, Math.floor(base*mult));
+    hit.hp=Math.max(0, hit.hp-dmg);
+    addDmgText(hit.x,hit.y,(crit?'CRIT ':'')+dmg,'#38bdf8');
+    if(hit.hp===0){
+      if(target===hit){ target=null; autoChase=false; }
+      logSys('Nemico sconfitto. +25 XP');
+      enemies.splice(enemies.indexOf(hit),1);
+      gainXP(25);
+      handleDrop();
+      setTimeout(()=>{ if(WORLD.current==='main'){ const s=randEmpty(); enemies.push(makeArcher(s.x,s.y)); } }, 1000);
+    }
+    skillshots.splice(si,1);
+    continue;
+  }
+  startTween(pr, pr.x, pr.y, nx, ny, performance.now()); pr.x=nx; pr.y=ny;
+  pr.rangeLeft--; if(pr.rangeLeft<=0){ skillshots.splice(si,1); continue; }
+}
+
         }
+        function trySkillshot(){
+  const now=performance.now();
+  if(now - player.lastSkill < player.skillCd || dead) return;
+  let dir={dx:lastMoveDir.dx, dy:lastMoveDir.dy};
+  if(target){
+    dir.dx=Math.sign(target.x-player.x)||0;
+    dir.dy=Math.sign(target.y-player.y)||0;
+    if(dir.dx===0 && dir.dy===0) dir={dx:lastMoveDir.dx,dy:lastMoveDir.dy};
+  }
+  if(dir.dx===0 && dir.dy===0) dir={dx:1,dy:0};
+  const p={ x:player.x, y:player.y, dx:dir.dx, dy:dir.dy, spdTick:0, vx:player.x, vy:player.y,
+            rangeLeft:player.skillRange, min:player.skillMin, max:player.skillMax };
+  skillshots.push(p);
+  player.lastSkill=now;
+  toast('Skillshot');
+}
+
       }
 
       checkPortalEnter();
