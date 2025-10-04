@@ -358,13 +358,15 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   charClose.onclick=()=>{ charWin.classList.add('hidden'); };
   npcClose.onclick=()=>npcWin.classList.add('hidden');
   function canvasToTile(ev){
-    const r=cv.getBoundingClientRect(), t=ev.touches&&ev.touches[0];
-    const cx=t?t.clientX:ev.clientX, cy=t?t.clientY;
-    const sx=(cx-r.left)*(cv.width/r.width), sy=(cy-r.top)*(cv.height/r.height);
-    const tx = Math.max(0, Math.min(COLS-1, (sx/TILE)|0));
-    const ty = Math.max(0, Math.min(ROWS-1, (sy/TILE)|0));
-    return {sx, sy, tx, ty};
-  }
+  const r = cv.getBoundingClientRect(), t = ev.touches && ev.touches[0];
+  const cx = t ? t.clientX : ev.clientX;
+  const cy = t ? t.clientY : ev.clientY;
+  const sx = (cx - r.left) * (cv.width / r.width), sy = (cy - r.top) * (cv.height / r.height);
+  const tx = Math.max(0, Math.min(COLS-1, (sx / TILE) | 0));
+  const ty = Math.max(0, Math.min(ROWS-1, (sy / TILE) | 0));
+  return { sx, sy, tx, ty };
+}
+
   function enemyRect(e){ const x=e.x*TILE+TILE/2-16, y=e.y*TILE+TILE/2-22; return {x,y,w:32,h:36}; }
   function inRect(px,py,r){ return px>=r.x&&px<=r.x+r.w&&py>=r.y&&py<=r.y+r.h; }
   function getEnemyAtScreen(sx,sy){ for(let i=0;i<enemies.length;i++){ const ee=enemies[i]; if(inRect(sx,sy,enemyRect(ee))) return ee; } return null; }
