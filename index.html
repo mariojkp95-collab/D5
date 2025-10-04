@@ -827,7 +827,7 @@ startTween(player,fx,fy,player.x,player.y,now);
 
           lastMoveDir={dx:Math.sign(player.x-fx),dy:Math.sign(player.y-fy)};
           pathQueue.shift();
-          for(let si=skillshots.length-1; si>=0; si--){
+         
   const pr=skillshots[si];
   pr.spdTick=(pr.spdTick+1)%1; // veloce: 1 tile per tick
   const nx=pr.x+pr.dx, ny=pr.y+pr.dy;
@@ -959,6 +959,45 @@ function trySkillshot(){
             const nowA=performance.now(); if(nowA-player.lastAtk>=getAtkCd()) attackEnemy(target);
           }
         }
+        // Skillshots (giocatore) — avanzamento e collisione
+for(let si=skillshots.length-1; si>=0; si--){
+  const pr=skillshots[si];
+  pr.spdTick=(pr.spdTick+1)%1; // 1 tile per tick; metti %2 se vuoi più lenta
+  const nx=pr.x+pr.dx, ny=pr.y+pr.dy;
+
+  // muro o fuori mappa → rimuovi
+  if(!inside(nx,ny) || map[ny][nx]===1){ skillshots.splice(si,1); continue; }
+
+  // collisione con il primo nemico sulla linea
+  let hit=null;
+  for(let i=0;i<enemies.length;i++){ const e=enemies[i]; if(e.x===nx && e.y===ny){ hit=e; break; } }
+
+  if(hit){
+    const base=rndInt(pr.min, pr.max);
+    const crit=rollCrit(getCritChance());
+    const mult=crit?getCritMult():1;
+    const dmg=Math.max(0, Math.floor(base*mult));
+    hit.hp=Math.max(0, hit.hp-dmg);
+    addDmgText(hit.x,hit.y,(crit?'CRIT ':'')+dmg,'#38bdf8');
+
+    if(hit.hp===0){
+      if(target===hit){ target=null; autoChase=false; }
+      logSys('Nemico sconfitto. +25 XP');
+      enemies.splice(enemies.indexOf(hit),1);
+      gainXP(25);
+      handleDrop();
+      setTimeout(()=>{ if(WORLD.current==='main'){ const s=randEmpty(); enemies.push(makeArcher(s.x,s.y)); } }, 1000);
+    }
+    skillshots.splice(si,1);
+    continue;
+  }
+
+  // avanza
+  startTween(pr, pr.x, pr.y, nx, ny, performance.now());
+  pr.x=nx; pr.y=ny;
+  pr.rangeLeft--; if(pr.rangeLeft<=0){ skillshots.splice(si,1); continue; }
+}
+
       }
 
       processBleed(now);
