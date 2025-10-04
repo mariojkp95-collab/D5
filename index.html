@@ -745,6 +745,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     const aggroSilLeft=Math.max(0, entryAggroSilenceUntil - performance.now())|0;
         statusEl.textContent=`build:${BUILD} | LV ${player.lvl} ${player.lvl<MAX_LVL?('('+Math.floor(ratio*100)+'%)'):''} | HP ${player.hp}/${player.maxHp} | ATK ${player.atkMin}–${player.atkMax} | monete ${player.coins} | AggroSil ${aggroSilLeft}ms | TPGuard ${guardLeft}ms`;
   }
+ }
 
  
  function draw(){
