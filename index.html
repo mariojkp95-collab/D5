@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Drakoria — Maestro + Equip + Skillshot + Fix</title>
+<title>Drakoria — Maestro + Equip + Skillshot (fix path + autochase + homing)</title>
 <style>
 :root{
   --bg:#0b1224; --panel:#0f172a; --stroke:#1f2a44; --text:#e5e7eb; --muted:#9ca3af;
@@ -17,7 +17,7 @@ header{display:flex;justify-content:space-between;align-items:center;padding:10p
 header .muted{color:var(--muted);margin-left:8px}
 header .btn{background:#26325a;color:#fff;border:1px solid #31406e;border-radius:8px;padding:6px 10px;cursor:pointer}
 main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);border:1px solid var(--stroke);border-radius:12px;position:relative}
-#game{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--stroke);background:#0a1630;image-rendering:pixelated;touch-action:none}
+#game{display:block;width:100%;height:auto;border-radius:10px;border:1px solid #31406; background:#0a1630;image-rendering:pixelated;touch-action:none}
 .help{margin:.6rem 0 0;color:#a1a1aa}
 #status{margin-top:8px;color:var(--muted)}
 .err{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:#7f1d1d;color:#fff;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;z-index:50;font-weight:600;max-width:90vw;white-space:pre-wrap;display:none}
@@ -91,7 +91,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   <p class="help">
     Singolo tap su un <b>nemico</b> = seleziona · <b>doppio tap</b> = auto-inseguimento<br>
     Singolo tap su <b>Maestro</b> = seleziona · <b>doppio tap</b> = parla<br>
-    SPAZIO/🗡️ → se hai un target, attiva auto-inseguimento; <b>F</b>/⚡ dash; <b>Q</b>/🎯 skillshot. Portale viola tra Spawn ↔ Main.
+    SPAZIO/🗡️ → se hai un target, attiva auto-inseguimento; <b>F</b>/⚡ dash; <b>Q</b>/🎯 skillshot (homing se target). Portale viola tra Spawn ↔ Main.
   </p>
   <div id="status"></div>
 </main>
@@ -152,7 +152,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 
 <script>
 (function(){
-  const BUILD='MAESTRO+EQUIP+SKILLSHOT+FIX';
+  const BUILD='MAESTRO+EQUIP+SKILLSHOT+FIXPATH+HOMING';
   const SAVE_KEY='save_maestro_equip';
   const cv=document.getElementById('game'); const ctx=cv.getContext('2d');
 
@@ -217,9 +217,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     let placed=0, guard=0;
     while(placed<16 && guard<500){
       guard++;
-      const bx=(Math.random()*COLS|0), by=(Math.random() * ROWS | 0);
+      const bx=(Math.random()*COLS|0), by=(Math.random()*ROWS|0);
       if(isPortalTile('main',bx,by)) continue;
-      if(bx===COLS>>1 && by===ROWS>>1) continue;
       if(m[by][bx]===0){ m[by][bx]=1; placed++; }
     }
     MAIN_MAP = m;
@@ -241,7 +240,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
   function getVar(n){ const cs=getComputedStyle(document.documentElement); return cs.getPropertyValue(n).trim(); }
 
-  /* BFS */
+  /* BFS (FIX: push corretto x,y) */
   function bfs(sx,sy,tx,ty){
     if(!walkable(tx,ty)) return null;
     const q=[{x:sx,y:sy}], prev={}, seen={}; let head=0; seen[sx+','+sy]=1;
@@ -254,7 +253,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       }
       for(let d=0; d<4; d++){
         const nx=c.x+dirs[d][0], ny=c.y+dirs[d][1], kk=nx+','+ny;
-        if(!walkable(nx,ny)||seen[kk]) continue; seen[kk]=1; prev[kk]={x:c.x,y:c.y}; q.push({x:nx,ny});
+        if(!walkable(nx,ny)||seen[kk]) continue; seen[kk]=1; prev[kk]={x:c.x,y:c.y};
+        q.push({x:nx, y:ny}); /* ← FIX */
       }
     }
     return null;
@@ -455,7 +455,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       if(lastNpcTapId===npc.kind && (now-lastNpcTapTs)<=350){
         openMaestro();
       }else{
-        selectedNpc=npc; draw(); // selezione
+        selectedNpc=npc; draw();
       }
       lastNpcTapId=npc.kind; lastNpcTapTs=now;
       return;
@@ -472,7 +472,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       lastEnemyTapId=clicked.id; lastEnemyTapTs=now; updateTargetFrame(); draw(); return;
     }
 
-    // Clic su terreno → muovi (non toccare selezioni)
+    // Clic su terreno → muovi (continua fino a destinazione)
     autoChase=false;
     const p=bfs(player.x,player.y,m.tx,m.ty);
     if(p && p.length){
@@ -493,7 +493,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   window.addEventListener('keydown', (e)=>{
     if(e.code==='Space'||e.key===' '){
       e.preventDefault();
-      if(target) autoChase = true;      // ← abilita autoclick via spazio
+      if(target) autoChase = true;      // abilita autoclick via spazio
       tryAttackAdjacent();
     }
     if(e.code==='KeyF') tryDash();
@@ -847,7 +847,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     ctx.fillText('Maestro', x+TILE/2, y+TILE/2+26);
   }
 
-  /* Guards / helper */
   function updateTargetFrame(){}
 
   /* Bleed */
@@ -885,10 +884,12 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     toast('Dash'); draw();
   }
 
-  /* Skillshot */
+  /* Skillshot — ora HOMING se hai un target */
   function trySkillshot(){
     const now=performance.now();
     if(now - player.lastSkill < player.skillCd || dead) return;
+
+    // direzione iniziale
     let dir={dx:lastMoveDir.dx, dy:lastMoveDir.dy};
     if(target){
       dir.dx=Math.sign(target.x-player.x)||0;
@@ -896,11 +897,13 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       if(dir.dx===0 && dir.dy===0) dir={dx:lastMoveDir.dx,dy:lastMoveDir.dy};
     }
     if(dir.dx===0 && dir.dy===0) dir={dx:1,dy:0};
+
     const p={ x:player.x, y:player.y, dx:dir.dx, dy:dir.dy, spdTick:0, vx:player.x, vy:player.y,
-              rangeLeft:player.skillRange, min:player.skillMin, max:player.skillMax };
+              rangeLeft:player.skillRange, min:player.skillMin, max:player.skillMax,
+              homing: !!target, targetId: target ? target.id : null };
     skillshots.push(p);
     player.lastSkill=now;
-    toast('Skillshot');
+    toast(p.homing?'Skillshot (homing)':'Skillshot');
   }
 
   /* AI helper: posizione di fuoco per arciere */
@@ -931,7 +934,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 
       if(mustMoveOffExit && !(player.x===lastExit.x && player.y===lastExit.y)) mustMoveOffExit=false;
 
-      // Player path follow
+      // Player path follow (continua lungo l'intero path)
       if(!dead && pathQueue.length){
         const next=pathQueue[0];
         let blocked=!walkable(next.x,next.y);
@@ -1021,9 +1024,35 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         startTween(pr, pr.x, pr.y, nx, ny, now); pr.x=nx; pr.y=ny;
       }
 
-      // Skillshot nostri
+      // Skillshot nostri (HOMING se assegnato targetId)
       for(let si=skillshots.length-1; si>=0; si--){
         const pr=skillshots[si];
+
+        // Homing: aggiorna direzione verso il target selezionato, se esiste ancora
+        if(pr.homing){
+          let tgt=null;
+          if(pr.targetId!=null){
+            for(let i=0;i<enemies.length;i++){ if(enemies[i].id===pr.targetId){ tgt=enemies[i]; break; } }
+          } else if(target){ tgt=target; }
+          if(tgt){
+            const dx=tgt.x - pr.x, dy=tgt.y - pr.y;
+            // priorità all’asse più lontano; fallback se muro
+            let ndx = Math.sign(Math.abs(dx)>=Math.abs(dy) ? dx : 0);
+            let ndy = Math.sign(Math.abs(dy)> Math.abs(dx) ? dy : 0);
+            // se direzione scelta blocca, prova l'altra
+            if((ndx||ndy) && (!inside(pr.x+ndx,pr.y+ndy) || map[pr.y+ndy][pr.x+ndx]===1)){
+              if(ndx!==0){ // prova verticale
+                const sdy=Math.sign(dy);
+                if(inside(pr.x,pr.y+sdy) && map[pr.y+sdy][pr.x]!==1){ ndx=0; ndy=sdy; }
+              }else if(ndy!==0){
+                const sdx=Math.sign(dx);
+                if(inside(pr.x+sdx,pr.y) && map[pr.y][pr.x+sdx]!==1){ ndx=sdx; ndy=0; }
+              }
+            }
+            if(ndx!==0 || ndy!==0){ pr.dx=ndx; pr.dy=ndy; }
+          }
+        }
+
         pr.spdTick=(pr.spdTick+1)%1; // 1 tile per tick
         const nx=pr.x+pr.dx, ny=pr.y+pr.dy;
         if(!inside(nx,ny) || map[ny][nx]===1){ skillshots.splice(si,1); continue; }
