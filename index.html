@@ -21,8 +21,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 .help{margin:.6rem 0 0;color:#a1a1aa}
 #status{margin-top:8px;color:var(--muted)}
 .err{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:#7f1d1d;color:#fff;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;z-index:50;font-weight:600;max-width:90vw;white-space:pre-wrap;display:none}
-
-/* Log */
 .log{position:fixed; left:16px; bottom:16px; width:300px; max-width:80vw;
   background:rgba(15,23,42,.9); border:1px solid #1f2a44; border-radius:10px; padding:8px 10px; z-index:26}
 .log .h{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-weight:700}
@@ -31,8 +29,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 .log .dmg{color:#fca5a5}
 .log .heal{color:#86efac}
 .log .sys{color:#93c5fd}
-
-/* Game Over */
 .death{position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.45); z-index:60}
 .death.hidden{display:none}
 .death-box{background:#0f172a; border:1px solid #1f2a44; padding:14px; border-radius:12px; width:min(420px,92vw); box-shadow:0 18px 44px rgba(0,0,0,.55)}
@@ -41,8 +37,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 .death-actions{display:flex; gap:8px; justify-content:flex-end}
 .btn{border:1px solid #31406e;background:#2563eb;color:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}
 .btn:disabled{background:#1f2a44;color:#9aa0ad;cursor:not-allowed}
-
-/* Character (stats) */
 .char{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:560px; max-width:95vw;
      background:#0f172a; border:1px solid #1f2a44; border-radius:12px; box-shadow:0 18px 44px rgba(0,0,0,.45); z-index:46}
 .char-h{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #1f2a44;font-weight:700}
@@ -54,8 +48,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 .stat .v{font-weight:700}
 .hidden{display:none}
 .subtle{color:#9ca3af;font-size:12px}
-
-/* Maestro panel */
 .npc{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:640px; max-width:96vw;
   background:#0f172a; border:1px solid #1f2a44; border-radius:12px; box-shadow:0 18px 44px rgba(0,0,0,.45); z-index:47}
 .npc-h{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #1f2a44;font-weight:800}
@@ -66,8 +58,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 .npc-card h4{margin:0 0 6px 0}
 .npc-li{margin:0 0 8px 0}
 .npc-li b{color:#e5e7eb}
-
-/* Toast + Drop card */
 .toast{position:fixed; left:50%; bottom:84px; transform:translateX(-50%); background:rgba(15,23,42,.9); border:1px solid #1f2a44; color:#e5e7eb; padding:6px 10px; border-radius:10px; z-index:55; display:none}
 .dropcard{position:fixed; left:50%; bottom:140px; transform:translateX(-50%); background:#0b1224; border:1px solid #2a355c; color:#e5e7eb; padding:10px 12px; border-radius:12px; z-index:56; display:none; min-width:260px}
 .dropcard .r{font-weight:800}
@@ -100,7 +90,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 <div id="toast" class="toast"></div>
 <div id="dropCard" class="dropcard"></div>
 
-<!-- Game Over -->
 <div id="deathOverlay" class="death hidden" role="dialog" aria-modal="true" aria-label="Game Over">
   <div class="death-box">
     <div class="death-title">Sei morto</div>
@@ -112,7 +101,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   </div>
 </div>
 
-<!-- Character (stats quick) -->
 <section id="charWin" class="char hidden" role="dialog" aria-modal="true" aria-label="Personaggio">
   <div class="char-h"><span>Personaggio</span><button id="charClose" class="char-x">×</button></div>
   <div class="char-b">
@@ -122,7 +110,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   </div>
 </section>
 
-<!-- Maestro (stat tutorial) -->
 <section id="npcWin" class="npc hidden" role="dialog" aria-modal="true" aria-label="Maestro">
   <div class="npc-h"><span>Maestro</span><button id="npcClose" class="npc-x">×</button></div>
   <div class="npc-b">
@@ -154,29 +141,23 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   const BUILD='MAESTRO+EQUIP';
   const SAVE_KEY='save_maestro_equip';
   const cv=document.getElementById('game'); const ctx=cv.getContext('2d');
-
-  /* UI */
   const statusEl=document.getElementById('status');
   const errBox=document.getElementById('errBox');
   const logBody=document.getElementById('logBody');
   const toastEl=document.getElementById('toast');
   const dropCardEl=document.getElementById('dropCard');
-
   const deathOverlay=document.getElementById('deathOverlay');
   const deathRespawn=document.getElementById('deathRespawn');
   const deathReset=document.getElementById('deathReset');
-
   const btnChar=document.getElementById('btnChar');
   const charWin=document.getElementById('charWin');
   const charClose=document.getElementById('charClose');
   const eqInfo=document.getElementById('eqInfo');
   const charBasics=document.getElementById('charBasics');
   const charStats=document.getElementById('charStats');
-
   const npcWin=document.getElementById('npcWin');
   const npcClose=document.getElementById('npcClose');
   const npcValues=document.getElementById('npcValues');
-
   function panic(where,e){
     errBox.style.display='block';
     errBox.textContent='ERRORE '+where+': '+(e && (e.message||e));
@@ -199,8 +180,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function logHeal(m){ logLine(m,'heal'); }
   function logSys(m){ logLine(m,'sys'); }
   function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-
-  /* World */
   const COLS=21, ROWS=12, TILE=64; cv.width=COLS*TILE; cv.height=ROWS*TILE;
   const WORLD={ current:'spawn', portals:makePortals() };
   const THEMES={ main:{'--tileA':'#0e2a1e','--tileB':'#123022'}, spawn:{'--tileA':'#1e1f3a','--tileB':'#23264a'} };
@@ -213,8 +192,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     if(name==='main'){ for(let i=0;i<16;i++){ const bx=(Math.random()*COLS|0), by=(Math.random()*ROWS|0); if(isPortalTile('main',bx,by)) continue; m[by][bx]=1; } }
     return {map:m, theme:(name==='main')?THEMES.main:THEMES.spawn};
   }
-
-  /* Utils */
   function inside(x,y){ return x>=0&&y>=0&&x<COLS&&y<ROWS; }
   function rndInt(a,b){ return a+((Math.random()*(b-a+1))|0); }
   function walkable(x,y){ if(!inside(x,y)) return false; if(map[y][x]===1) return false; return true; }
@@ -223,8 +200,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function randEmpty(){ for(let t=0;t<200;t++){ const x=rndInt(0,COLS-1), y=rndInt(0,ROWS-1); if(walkable(x,y)&&tileFree(x,y)) return {x,y}; } return {x:1,y:1}; }
   function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
   function getVar(n){ const cs=getComputedStyle(document.documentElement); return cs.getPropertyValue(n).trim(); }
-
-  /* BFS pathfinding */
   function bfs(sx,sy,tx,ty){
     if(!walkable(tx,ty)) return null;
     const q=[{x:sx,y:sy}], prev={}, seen={}; let head=0; seen[sx+','+sy]=1;
@@ -253,8 +228,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     }
     return best;
   }
-
-  /* Tween */
   let MOVE_MS=110;
   function startTween(o,fx,fy,tx,ty,now){ o.vFromX=fx; o.vFromY=fy; o.vToX=tx; o.vToY=ty; o.vStart=now; o.vEnd=now+MOVE_MS; if(o.vx==null)o.vx=fx; if(o.vy==null)o.vy=fy; }
   function tweenUpdate(o,now){
@@ -263,8 +236,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     else { if(o.x!=null) o.vx=o.x; if(o.y!=null) o.vy=o.y; o.vStart=0; o.vEnd=0; }
   }
   function updateTweens(){ const now=performance.now(); tweenUpdate(player,now); for(let i=0;i<enemies.length;i++) tweenUpdate(enemies[i],now); for(let j=0;j<projectiles.length;j++) tweenUpdate(projectiles[j],now); }
-
-  /* Player + Stats + Equip */
   const player={
     x:12,y:4,
     baseMaxHp:100, baseAtkMin:6, baseAtkMax:12,
@@ -274,12 +245,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     stats:{ atkSpeed:0.00, critDmg:0.50, luck:0.00, defense:0, mitigation:0.00, projRes:0.00, bleedRes:0.00 },
     status:{ bleed:null }
   };
-  // equip leggero
   let equipped={
     weapon:{ name:'Coltellino', slot:'weapon', rarity:'common', icon:'🗡️', atkBonus:0, affix:{} },
     armor: { name:'Tunica', slot:'armor', rarity:'common', icon:'🛡️', hpBonus:0, affix:{} }
   };
-
   const MAX_LVL=99;
   function xpNeeded(l){ return Math.floor(50 * Math.pow(l, 1.5)); }
   function gainXP(n){
@@ -306,8 +275,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     logSys('Level up → LV '+player.lvl);
     toast('LV '+player.lvl);
   }
-
-  // effettivi = base + affissi equip
   function effectiveStat(name){
     let v = player.stats[name]||0;
     if(equipped.weapon && equipped.weapon.affix && equipped.weapon.affix[name]) v += equipped.weapon.affix[name];
@@ -317,7 +284,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function getCritChance(){ return clamp(player.baseCrit + effectiveStat('luck'), 0, 0.90); }
   function getCritMult(){ return 1 + effectiveStat('critDmg'); }
   function getAtkCd(){ const eff=player.atkCd*(1-clamp(effectiveStat('atkSpeed'),0,0.50)); return Math.max(180, Math.floor(eff)); }
-
   function recomputeStats(heal){
     let atkB = equipped.weapon?.atkBonus|0;
     let hpB  = equipped.armor ?.hpBonus |0;
@@ -327,8 +293,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     if(heal) player.hp=player.maxHp; if(player.hp>player.maxHp) player.hp=player.maxHp;
     renderCharIfOpen(); renderNpcValues();
   }
-
-  /* Enemies + projectiles */
   let enemies=[], projectiles=[];
   let _eid=1; function giveId(e){ e.id=_eid++; return e; }
   function makeArcher(x,y){
@@ -357,28 +321,21 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       if(walkable(nx,ny)&&tileFree(nx,ny)&&!isPortalTile(WORLD.current,nx,ny)) return {x:nx,y:ny};
     } return randEmpty();
   }
-
-  /* NPC Maestro in spawn */
   const NPCS=[];
   function makeMaestro(x,y){
     return { kind:'maestro', x, y, w:1, h:1, name:'Maestro', icon:'🧙‍♂️' };
   }
   function ensureSpawnNpcs(){
     if(!NPCS.find(n=>n.kind==='maestro')){
-      // vicino al centro spawn lato sinistro
       const mid=ROWS>>1;
-      const pos={x:Math.max(2, COLS-6), y:mid-3}; // un po' distante dal portale
+      const pos={x:Math.max(2, COLS-6), y:mid-3};
       NPCS.push(makeMaestro(pos.x,pos.y));
     }
   }
-
-  /* Init spawn */
   (function initSpawn(){
     const res=buildMap('spawn'); map=res.map; applyTheme(res.theme); WORLD.current='spawn'; enemies.length=0; recomputeStats(true);
     ensureSpawnNpcs();
   })();
-
-  /* Input & HUD */
   const HUD={ atk:null, pot:null, char:null };
   function layoutHud(){
     HUD.atk  = { x: cv.width - 86,  y: cv.height - 86, w: 72, h: 72 };
@@ -387,19 +344,15 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   }
   window.addEventListener('resize', layoutHud, false);
   layoutHud();
-
   let target=null, autoChase=false, lastEnemyTapTs=0, lastEnemyTapId=-1;
   let pathQueue=[], holdTimer=null, destMarker=null;
   let dead=false;
-
   btnChar.onclick=()=>{ charWin.classList.toggle('hidden'); renderCharPanel(); };
   charClose.onclick=()=>{ charWin.classList.add('hidden'); };
-
   npcClose.onclick=()=>npcWin.classList.add('hidden');
-
   function canvasToTile(ev){
     const r=cv.getBoundingClientRect(), t=ev.touches&&ev.touches[0];
-    const cx=t?t.clientX:ev.clientX, cy=t?t.clientY:ev.clientY;
+    const cx=t?t.clientX:ev.clientX, cy=t?t.clientY;
     const sx=(cx-r.left)*(cv.width/r.width), sy=(cy-r.top)*(cv.height/r.height);
     const tx = Math.max(0, Math.min(COLS-1, (sx/TILE)|0));
     const ty = Math.max(0, Math.min(ROWS-1, (sy/TILE)|0));
@@ -408,14 +361,12 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function enemyRect(e){ const x=e.x*TILE+TILE/2-16, y=e.y*TILE+TILE/2-22; return {x,y,w:32,h:36}; }
   function inRect(px,py,r){ return px>=r.x&&px<=r.x+r.w&&py>=r.y&&py<=r.y+r.h; }
   function getEnemyAtScreen(sx,sy){ for(let i=0;i<enemies.length;i++){ const ee=enemies[i]; if(inRect(sx,sy,enemyRect(ee))) return ee; } return null; }
-
   function npcRect(n){ const x=n.x*TILE+TILE/2-16, y=n.y*TILE+TILE/2-24; return {x,y,w:32,h:40}; }
   function getNpcAtScreen(sx,sy){
     if(WORLD.current!=='spawn') return null;
     for(let i=0;i<NPCS.length;i++){ const n=NPCS[i]; if(inRect(sx,sy,npcRect(n))) return n; }
     return null;
   }
-
   function onPointerDown(ev){
     if(dead) return;
     const m=canvasToTile(ev), pos={sx:m.sx,sy:m.sy};
@@ -426,25 +377,17 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     if(dead) return;
     clearTimeout(holdTimer);
     const m=canvasToTile(ev), now=performance.now();
-
-    // HUD
     if(inRect(m.sx,m.sy,HUD.atk)){ tryAttackAdjacent(); return; }
     if(inRect(m.sx,m.sy,HUD.pot)){ usePotion(); return; }
     if(inRect(m.sx,m.sy,HUD.char)){ charWin.classList.toggle('hidden'); renderCharPanel(); return; }
-
-    // NPC Maestro
     const npc=getNpcAtScreen(m.sx,m.sy);
     if(npc){ openMaestro(); return; }
-
-    // Target
     const clicked=getEnemyAtScreen(m.sx,m.sy);
     if(clicked){
       if(lastEnemyTapId===clicked.id && (now-lastEnemyTapTs)<=350){ target=clicked; autoChase=true; pathQueue=[]; }
       else { target=clicked; autoChase=false; }
       lastEnemyTapId=clicked.id; lastEnemyTapTs=now; updateTargetFrame(); draw(); return;
     }
-
-    // Movimento
     autoChase=false;
     const p=bfs(player.x,player.y,m.tx,m.ty);
     if(p && p.length){ pathQueue=p; destMarker={x:m.tx,y:m.ty,ttl:1400}; }
@@ -460,22 +403,17 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   cv.addEventListener('pointerup', onPointerUp, {passive:false});
   cv.addEventListener('click', onPointerUp, false);
   window.addEventListener('keydown', (e)=>{ if(e.code==='Space'||e.key===' ') tryAttackAdjacent(); }, false);
-
   function tryAttackAdjacent(){
     const now=performance.now(); if(now-player.lastAtk<getAtkCd()) return false;
     if(target && chebyshev(player,target)===1){ attackEnemy(target); return true; }
     for(let i=0;i<enemies.length;i++){ const en=enemies[i]; if(chebyshev(player,en)===1){ attackEnemy(en); return true; } }
     return false;
   }
-
-  /* Combat + drops */
   const dmgTexts=[];
   function addDmgText(tx,ty,txt,color){ const px=tx*TILE+TILE/2, py=ty*TILE+TILE/2-28; dmgTexts.push({x:px,y:py,txt,color,ttl:700,vy:-0.04}); }
   function updateDmgTexts(dt){ for(let i=dmgTexts.length-1;i>=0;i--){ const d=dmgTexts[i]; d.ttl-=dt; d.y+=d.vy*dt; if(d.ttl<=0) dmgTexts.splice(i,1); } }
   function drawDmgTexts(){ for(let i=0;i<dmgTexts.length;i++){ const d=dmgTexts[i]; const a=Math.max(0,Math.min(1,d.ttl/700)); ctx.save(); ctx.globalAlpha=a; ctx.fillStyle=d.color; ctx.font='bold 16px system-ui'; ctx.textAlign='center'; ctx.fillText(d.txt,d.x,d.y); ctx.restore(); } }
   function rollCrit(ch){ return Math.random() < ch; }
-
-  // generator affissi
   function pick(arr){ return arr[(Math.random()*arr.length)|0]; }
   function genWeapon(rarity){
     const baseNames={ uncommon:['Pugnale Rozzo','Spada Leggera','Ascia di Rame'], rare:['Lama del Falco','Sciabola Runica'] };
@@ -511,7 +449,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     return {slot:'armor', icon, name, rarity, hpBonus, affix:aff};
   }
   function maybeDropEquip(){
-    // 25% drop; 60% weapon, 40% armor; rarity 70% uncommon, 30% rare
     if(Math.random()<0.25){
       const isWeapon = Math.random()<0.6;
       const rarity = Math.random()<0.7 ? 'uncommon' : 'rare';
@@ -560,17 +497,14 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     return out.join(' · ');
   }
   function rarityClass(r){ return r==='rare'?'ra':'u'; }
-
   function handleDrop(){
     const it=maybeDropEquip(); if(!it) return;
-    // card
     const mainStat = it.slot==='weapon' ? `ATK +${it.atkBonus}` : `HP +${it.hpBonus}`;
     const affTxt = formatAffix(it.affix);
     const cls = rarityClass(it.rarity);
     const html = `<div class="r ${cls}">${it.icon} ${escapeHtml(it.name)} <small>(${it.rarity})</small></div>
                   <div>${mainStat}</div>
                   <div class="subtle">${escapeHtml(affTxt)}</div>`;
-    // auto-equip se migliore
     const scoreNew=itemScore(it), scoreCur=currentScore(it.slot);
     if(scoreNew>scoreCur){
       equipItem(it);
@@ -583,7 +517,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       logSys(`Equip scartato: +${coinsGain} monete`);
     }
   }
-
   function attackEnemy(t){
     const now=performance.now(); player.lastAtk=now;
     const base=rndInt(player.atkMin,player.atkMax);
@@ -596,12 +529,11 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       logSys('Nemico sconfitto. +25 XP');
       enemies.splice(enemies.indexOf(t),1);
       gainXP(25);
-      handleDrop(); // ← drop equip leggero
+      handleDrop();
       setTimeout(()=>{ if(WORLD.current==='main'){ const s=randEmpty(); enemies.push(makeArcher(s.x,s.y)); } }, 1000);
     }
     draw();
   }
-
   function applyDamageReduction(amount, source){
     let dmg=Math.max(0, amount-(effectiveStat('defense')|0));
     const miti=clamp(effectiveStat('mitigation'),0,0.60); dmg=Math.floor(dmg*(1-miti));
@@ -613,13 +545,11 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     player.hp=Math.max(0, player.hp-dmg); addDmgText(player.x,player.y,label+dmg,'#ff6b6b');
     if(player.hp===0) gameOver();
   }
-
   function usePotion(){
     if(player.pots<=0||player.hp>=player.maxHp) return;
     player.pots--; const heal=35; player.hp=Math.min(player.maxHp, player.hp+heal);
     logHeal('Pozione: +'+heal+' HP'); draw();
   }
-
   function gameOver(){
     dead=true; autoChase=false; pathQueue=[]; target=null;
     cv.style.filter='grayscale(1)'; cv.style.opacity='0.6';
@@ -638,21 +568,16 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     draw();
   };
   deathReset.onclick=()=>location.reload();
-
-  /* LoS */
   function hasLoS(ax,ay,bx,by){
     if(ax===bx){ const step=(ay<by)?1:-1; for(let y=ay+step; y!==by; y+=step){ if(map[y][ax]===1) return false; } return true; }
     if(ay===by){ const st=(ax<bx)?1:-1; for(let x=ax+st; x!==bx; x+=st){ if(map[ay][x]===1) return false; } return true; }
     return false;
   }
-
-  /* Portals robusti */
   let teleportGuardUntil=0;
   let entryAggroSilenceUntil=0;
   let mustMoveOffExit=false;
   let lastExit={x:-1,y:-1};
   function setPlayerPos(x,y){ player.x=x; player.y=y; player.vx=x; player.vy=y; }
-
   function findSafeExit(worldName, px, py, minGapFromPortal){
     const gap = (minGapFromPortal==null)?1:minGapFromPortal;
     const candidates = [
@@ -674,12 +599,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     if(!walkable(fx,fy) || isPortalTile(worldName,fx,fy)) fx=clamp(px-1,0,COLS-1);
     return {x:fx,y:fy};
   }
-
   function checkPortalEnter(){
     const now=performance.now();
     if(now<teleportGuardUntil) return false;
     if(mustMoveOffExit && player.x===lastExit.x && player.y===lastExit.y) return false;
-
     const list=WORLD.portals[WORLD.current]||[];
     for(let i=0;i<list.length;i++){
       const p=list[i];
@@ -689,13 +612,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         const exit = findSafeExit(p.to, p.tx, p.ty, 1);
         setPlayerPos(exit.x, exit.y);
         pathQueue.length=0;
-
         teleportGuardUntil = performance.now()+600;
         entryAggroSilenceUntil = performance.now()+900;
-
         mustMoveOffExit = true;
         lastExit = {x:exit.x, y:exit.y};
-
         logSys('Teletrasporto: '+(WORLD.current==='main'?'Main':'Spawn'));
         draw();
         return true;
@@ -703,8 +623,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     }
     return false;
   }
-
-  /* Render */
   function draw(){
     ctx.clearRect(0,0,cv.width,cv.height);
     for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
@@ -712,30 +630,23 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
     }
     drawPortals();
-
-    // NPC in spawn
     if(WORLD.current==='spawn'){
       for(let i=0;i<NPCS.length;i++){ const n=NPCS[i]; drawNpc(n); }
     }
-
     for(let i=0;i<enemies.length;i++){
       const e=enemies[i]; const ex=(e.vx!=null?e.vx:e.x), ey=(e.vy!=null?e.vy:e.y);
       drawActor(ex,ey,getVar('--enemy'));
       drawHpBar(ex,ey,e.hp,e.maxHp,true,(target===e));
       if(target===e) drawTargetRing(ex,ey);
     }
-
     const pxv=(player.vx!=null?player.vx:player.x), pyv=(player.vy!=null?player.vy:player.y);
     drawActor(pxv,pyv,getVar('--player')); drawHpBar(pxv,pyv,player.hp,player.maxHp,false,false);
-
     for(let p=0;p<projectiles.length;p++){
       const pr=projectiles[p]; const ptx=(pr.vx!=null?pr.vx:pr.x), pty=(pr.vy!=null?pr.vy:pr.y);
       const x=ptx*TILE+TILE/2, y=pty*TILE+TILE/2; ctx.fillStyle='#f87171'; ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
     }
-
     drawDmgTexts();
     drawHud();
-
     const need=(player.lvl<MAX_LVL)?xpNeeded(player.lvl):1;
     const ratio=(player.lvl<MAX_LVL)?Math.min(1,player.exp/need):1;
     const guardLeft=Math.max(0, teleportGuardUntil - performance.now())|0;
@@ -781,30 +692,19 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function drawNpc(n){
     const x=n.x*TILE, y=n.y*TILE;
     ctx.fillStyle=getVar('--shadow'); ctx.beginPath(); ctx.ellipse(x+TILE/2,y+TILE-10,16,6,0,0,Math.PI*2); ctx.fill();
-    // veste viola da maestro
     ctx.fillStyle='#6d28d9'; ctx.fillRect(x+TILE/2-16, y+TILE/2-22, 32, 36);
     ctx.fillStyle='#eab308'; ctx.font='18px system-ui'; ctx.textAlign='center';
     ctx.fillText('🧙‍♂️', x+TILE/2, y+TILE/2-10);
-    // nome
     ctx.fillStyle='#e5e7eb'; ctx.font='12px system-ui'; ctx.fillText('Maestro', x+TILE/2, y+TILE/2+26);
   }
-
-  /* Target frame placeholder */
   function updateTargetFrame(){}
-
-  /* Guards / helper */
   function movedOffExitTile(){ return !(player.x===lastExit.x && player.y===lastExit.y); }
-
-  /* Loop */
   let lastStepTs=performance.now();
   function step(){
     try{
       const now=performance.now();
       const dt=Math.min(200, now-lastStepTs)|0; lastStepTs=now;
-
       if(mustMoveOffExit && movedOffExitTile()) mustMoveOffExit=false;
-
-      // Player path follow
       if(!dead && pathQueue.length){
         const next=pathQueue[0];
         let blocked=!walkable(next.x,next.y);
@@ -815,22 +715,16 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
           pathQueue.shift();
         }
       }
-
-      // Portali
       checkPortalEnter();
-
-      // Enemy AI (aggro vicino+LoS, come prima)
       for(let j=0;j<enemies.length;j++){
         const e=enemies[j];
         e.moveTick=(e.moveTick+1)%e.moveEvery;
         const canMove=(e.moveTick===0);
-
         const distC=chebyshev(e,player);
         if(!e.aggro && now>=entryAggroSilenceUntil){
           const canAggro = (distC<=e.aggroRange) && (hasLoS(e.x,e.y,player.x,player.y) || distC<=2);
           if(canAggro){ e.aggro=true; e.lastSeenTs=now; }
         }
-
         const tooFar = chebyshev({x:e.spawnX,y:e.spawnY}, player) > e.leashRange || distC > e.leashRange;
         if(e.aggro){
           if(hasLoS(e.x,e.y,player.x,player.y) || distC<=1) e.lastSeenTs=now;
@@ -838,7 +732,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
             e.aggro=false; e.path = bfs(e.x,e.y,e.spawnX,e.spawnY)||[];
           }
         }
-
         if(e.aggro && now>=entryAggroSilenceUntil){
           const distM=Math.abs(e.x-player.x)+Math.abs(e.y-player.y);
           const inRange = (distM>=e.rangeMin && distM<=e.rangeMax && hasLoS(e.x,e.y,player.x,player.y));
@@ -871,8 +764,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
           }
         }
       }
-
-      // Proiettili
       for(let pi=projectiles.length-1; pi>=0; pi--){
         const pr=projectiles[pi];
         pr.spdTick=(pr.spdTick+1)%2; if(pr.spdTick!==0) continue;
@@ -885,8 +776,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         }
         startTween(pr, pr.x, pr.y, nx, ny, now); pr.x=nx; pr.y=ny;
       }
-
-      // Auto-chase & auto-attack
       if(autoChase && target && !dead){
         const stillThere = enemies.indexOf(target)!==-1;
         if(!stillThere){ autoChase=false; target=null; }
@@ -900,13 +789,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
           }
         }
       }
-
       updateDmgTexts(dt);
       if(destMarker){ destMarker.ttl-=dt; if(destMarker.ttl<=0) destMarker=null; }
-
       updateTweens();
       draw();
-
     }catch(e){ panic('step', e); }
   }
   function tryStepAlongPath(e, now){
@@ -917,8 +803,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     if(nxt.x===player.x && nxt.y===player.y){ e.path=[]; return; }
     const fx=e.x, fy=e.y; e.x=nxt.x; e.y=nxt.y; startTween(e,fx,fy,e.x,e.y,now);
   }
-
-  /* Panels */
   function pct(v){ return Math.round((v||0)*100); }
   function renderCharPanel(){
     if(charWin.classList.contains('hidden')) return;
@@ -949,7 +833,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     charStats.innerHTML =stats.map(kv=>`<div class="stat"><span class="k">${kv[0]}</span><span class="v">${kv[1]}</span></div>`).join('');
   }
   function renderCharIfOpen(){ renderCharPanel(); }
-
   function renderNpcValues(){
     if(npcWin.classList.contains('hidden')) return;
     const rows=[
@@ -967,12 +850,9 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     npcWin.classList.remove('hidden');
     renderNpcValues();
   }
-
-  /* Save/Load/Reset */
   const btnSave=document.getElementById('btnSave');
   const btnLoad=document.getElementById('btnLoad');
   const btnReset=document.getElementById('btnReset');
-
   btnSave.onclick=()=>{
     try{
       localStorage.setItem(SAVE_KEY, JSON.stringify({map, player, enemies, world:WORLD.current, equipped}));
@@ -994,11 +874,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     }catch(e){ panic('load', e); }
   };
   btnReset.onclick=()=>location.reload();
-
-  /* Kick loop */
   setInterval(step, 120);
   (function anim(){ updateTweens(); draw(); requestAnimationFrame(anim); })();
-
 })();
 </script>
 </body>
