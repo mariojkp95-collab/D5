@@ -17,7 +17,7 @@ header{display:flex;justify-content:space-between;align-items:center;padding:10p
 header .muted{color:var(--muted);margin-left:8px}
 header .btn{background:#26325a;color:#fff;border:1px solid #31406e;border-radius:8px;padding:6px 10px;cursor:pointer}
 main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);border:1px solid var(--stroke);border-radius:12px;position:relative}
-#game{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--stroke);background:#0a1630;image-rendering:pixelated;touch-action:none}
+#game{display:block;width:100%;height:auto;border-radius:10px;border:1px solid #1f2a44;background:#0a1630;image-rendering:pixelated;touch-action:none}
 .help{margin:.6rem 0 0;color:#a1a1aa}
 #status{margin-top:8px;color:var(--muted)}
 .err{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:#7f1d1d;color:#fff;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;z-index:50;font-weight:600;max-width:90vw;white-space:pre-wrap;display:none}
@@ -219,7 +219,7 @@ window.addEventListener('DOMContentLoaded', () => {
     clearTimeout(dropCardEl.__t);
     dropCardEl.__t=setTimeout(()=>dropCardEl.style.display='none', ttl||1600);
   }
-  function logLine(msg,cls){ const t=new Date(); const hh=String(t.getHours()).padStart(2,'0'), mm=String(t.getMinutes()).padStart(2,'0'), ss=String(t.getSeconds()).padStart(2,'0'); logBody.innerHTML+=`<div class="line ${cls||''}">[${hh}:${mm}:${ss}] ${escapeHtml(msg)}</div>`; logBody.scrollTop=logBody.scrollHeight; }
+  function logLine(msg,cls){ const t=new Date(); const hh=String(t.getHours()).padStart(2,'0'), mm=String(t.getMinutes()).padStart(2,'0'), ss=String(String(t.getSeconds()).padStart(2,'0')); logBody.innerHTML+=`<div class="line ${cls||''}">[${hh}:${mm}:${ss}] ${escapeHtml(msg)}</div>`; logBody.scrollTop=logBody.scrollHeight; }
   function logDmg(m){ logLine(m,'dmg'); }
   function logHeal(m){ logLine(m,'heal'); }
   function logSys(m){ logLine(m,'sys'); }
@@ -418,7 +418,11 @@ window.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('resize', layoutHud, false);
   layoutHud();
 
-  let target=null, autoChase=false, lastEnemyTapTs=0, lastEnemyTapId=-1;
+  // --- Tap Manager per il doppio click robusto ---
+  const dbl = { timer:null, firstId:-1, firstTs:0, threshold:300 };
+  function resetDbl(){ if(dbl.timer){ clearTimeout(dbl.timer); dbl.timer=null; } dbl.firstId=-1; dbl.firstTs=0; }
+
+  let target=null, autoChase=false;
   let pathQueue=[], holdTimer=null, destMarker=null;
   let dead=false, lastMoveDir={dx:1,dy:0};
 
@@ -452,6 +456,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if(dead) return;
     const m=canvasToTile(ev), pos={sx:m.sx,sy:m.sy};
     clearTimeout(holdTimer);
+    // long-press = solo selezione, mai auto-chase
     holdTimer=setTimeout(()=>{ const enemy=getEnemyAtScreen(pos.sx,pos.sy); if(enemy){ target=enemy; updateTargetFrame(); toast('Target'); draw(); } },450);
   }
   function onPointerUp(ev){
@@ -459,24 +464,42 @@ window.addEventListener('DOMContentLoaded', () => {
     clearTimeout(holdTimer);
     const m=canvasToTile(ev), now=performance.now();
 
-    if(inRect(m.sx,m.sy,HUD.atk)){ tryAttackAdjacent(); return; }
-    if(inRect(m.sx,m.sy,HUD.pot)){ usePotion(); return; }
-    if(inRect(m.sx,m.sy,HUD.dash)){ tryDash(); return; }
-    if(inRect(m.sx,m.sy,HUD.skillQ)){ trySkillQ(); return; }
-    if(inRect(m.sx,m.sy,HUD.skillW)){ trySkillW(); return; }
-    if(inRect(m.sx,m.sy,HUD.skillE)){ trySkillE(); return; }
-    if(inRect(m.sx,m.sy,HUD.char)){ charWin.classList.toggle('hidden'); renderCharPanel(); return; }
+    // HUD
+    if(inRect(m.sx,m.sy,HUD.atk)){ resetDbl(); tryAttackAdjacent(); return; }
+    if(inRect(m.sx,m.sy,HUD.pot)){ resetDbl(); usePotion(); return; }
+    if(inRect(m.sx,m.sy,HUD.dash)){ resetDbl(); tryDash(); return; }
+    if(inRect(m.sx,m.sy,HUD.skillQ)){ resetDbl(); trySkillQ(); return; }
+    if(inRect(m.sx,m.sy,HUD.skillW)){ resetDbl(); trySkillW(); return; }
+    if(inRect(m.sx,m.sy,HUD.skillE)){ resetDbl(); trySkillE(); return; }
+    if(inRect(m.sx,m.sy,HUD.char)){ resetDbl(); charWin.classList.toggle('hidden'); renderCharPanel(); return; }
 
+    // NPC
     const npc=getNpcAtScreen(m.sx,m.sy);
-    if(npc){ openMaestro(); return; }
+    if(npc){ resetDbl(); openMaestro(); return; }
 
+    // ENEMY
     const clicked=getEnemyAtScreen(m.sx,m.sy);
     if(clicked){
+      // feedback immediato: selezione target
       target=clicked; updateTargetFrame(); draw();
-      if(lastEnemyTapId===clicked.id && (now-lastEnemyTapTs)<=350){ target=clicked; autoChase=true; pathQueue=[]; toast('Auto-inseguimento'); }
-      lastEnemyTapId=clicked.id; lastEnemyTapTs=now; return;
+
+      // se secondo tap entro soglia sullo stesso nemico => auto-chase
+      if(dbl.timer && dbl.firstId===clicked.id && (now-dbl.firstTs)<=dbl.threshold){
+        clearTimeout(dbl.timer); dbl.timer=null; dbl.firstId=-1; dbl.firstTs=0;
+        autoChase=true; pathQueue=[]; toast('Auto-inseguimento');
+      } else {
+        // primo tap: armo il timer per distinguere single vs double
+        resetDbl();
+        dbl.firstId=clicked.id; dbl.firstTs=now;
+        dbl.timer=setTimeout(()=>{ // allo scadere: era solo single click → nulla oltre alla selezione
+          resetDbl();
+        }, dbl.threshold);
+      }
+      return;
     }
 
+    // TERRENO: muovi, e mai auto-chase
+    resetDbl();
     autoChase=false;
     const p=bfs(player.x,player.y,m.tx,m.ty);
     if(p && p.length){ pathQueue=p; destMarker={x:m.tx,y:m.ty,ttl:1400};
@@ -491,12 +514,12 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   cv.addEventListener('pointerdown', onPointerDown, {passive:false});
   cv.addEventListener('pointerup', onPointerUp, {passive:false});
-  /* FIX: rimosso listener 'click' duplicato che provocava doppia chiamata a onPointerUp e attivava l'autoChase con un solo click */
+  /* FIX pregresso: rimosso 'click' duplicato */
   // cv.addEventListener('click', onPointerUp, false);
 
   window.addEventListener('keydown', (e)=>{
     if(e.code==='Space'||e.key===' '){
-      if(target){ autoChase = !autoChase; if(autoChase){ pathQueue=[]; toast('Auto-inseguimento'); } else toast('Stop auto'); }
+      if(target){ autoChase = !autoChase; if(autoChase){ resetDbl(); pathQueue=[]; toast('Auto-inseguimento'); } else toast('Stop auto'); }
     }
     if(e.code==='KeyF') tryDash();
     if(e.code==='KeyQ') trySkillQ();
