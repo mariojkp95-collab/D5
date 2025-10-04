@@ -287,12 +287,16 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function recomputeStats(heal){
   const atkB = ((equipped && equipped.weapon && equipped.weapon.atkBonus) || 0) | 0;
   const hpB  = ((equipped && equipped.armor  && equipped.armor.hpBonus ) || 0) | 0;
+
   player.maxHp = Math.round(player.baseMaxHp + hpB);
   player.atkMin = Math.round(player.baseAtkMin + atkB);
   player.atkMax = Math.round(player.baseAtkMax + atkB);
+
   if(heal) player.hp = player.maxHp;
-  if(player.hp>player.maxHp) player.hp = player.maxHp;
-  renderCharIfOpen(); renderNpcValues();
+  if(player.hp > player.maxHp) player.hp = player.maxHp;
+
+  renderCharIfOpen();
+  renderNpcValues();
 }
 
   let enemies=[], projectiles=[];
