@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Drakoria — Maestro + Equip + Skillshot (fix path + autochase + homing)</title>
+<title>Drakoria — Mana + 3 Skill (Q/W/E) + HUD</title>
 <style>
 :root{
   --bg:#0b1224; --panel:#0f172a; --stroke:#1f2a44; --text:#e5e7eb; --muted:#9ca3af;
   --tileA:#0e2a1e; --tileB:#123022; --block:#15223b;
-  --player:#3b82f6; --enemy:#ef4444; --shadow:#0006; --hpBack:#1f2937;
+  --player:#3b82f6; --enemy:#ef4444; --shadow:#0006; --hpBack:#1f2937; --mp:#60a5fa;
   --rare:#60a5fa; --epic:#a78bfa; --legend:#f59e0b;
 }
 *{box-sizing:border-box}
@@ -17,7 +17,7 @@ header{display:flex;justify-content:space-between;align-items:center;padding:10p
 header .muted{color:var(--muted);margin-left:8px}
 header .btn{background:#26325a;color:#fff;border:1px solid #31406e;border-radius:8px;padding:6px 10px;cursor:pointer}
 main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);border:1px solid var(--stroke);border-radius:12px;position:relative}
-#game{display:block;width:100%;height:auto;border-radius:10px;border:1px solid #31406; background:#0a1630;image-rendering:pixelated;touch-action:none}
+#game{display:block;width:100%;height:auto;border-radius:10px;border:1px solid #31406e;background:#0a1630;image-rendering:pixelated;touch-action:none}
 .help{margin:.6rem 0 0;color:#a1a1aa}
 #status{margin-top:8px;color:var(--muted)}
 .err{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:#7f1d1d;color:#fff;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;z-index:50;font-weight:600;max-width:90vw;white-space:pre-wrap;display:none}
@@ -77,7 +77,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 </head>
 <body>
 <header>
-  <div><strong>Drakoria</strong> <span class="muted">maestro + equip drop + skillshot</span></div>
+  <div><strong>Drakoria</strong> <span class="muted">mana + 3 skill (Q/W/E) + hud</span></div>
   <div>
     <button id="btnChar" class="btn">Personaggio</button>
     <button id="btnSave" class="btn">Save</button>
@@ -89,9 +89,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 <main>
   <canvas id="game" width="1344" height="768" aria-label="Gioco"></canvas>
   <p class="help">
-    Singolo tap su un <b>nemico</b> = seleziona · <b>doppio tap</b> = auto-inseguimento<br>
-    Singolo tap su <b>Maestro</b> = seleziona · <b>doppio tap</b> = parla<br>
-    SPAZIO/🗡️ → se hai un target, attiva auto-inseguimento; <b>F</b>/⚡ dash; <b>Q</b>/🎯 skillshot (homing se target). Portale viola tra Spawn ↔ Main.
+    Singolo tap su <b>nemico</b> = selezione · <b>doppio tap</b> = auto-inseguimento.<br>
+    SPAZIO/🗡️ attacca (e abilita auto-inseguimento se hai un target).<br>
+    <b>Q</b> 🎯 skillshot homing (costo MP); <b>W</b> 🌀 cono istantaneo; <b>E</b> ➖ freccia perforante.<br>
+    <b>F</b>/⚡ dash. Portale viola tra Spawn ↔ Main.
   </p>
   <div id="status"></div>
 </main>
@@ -131,17 +132,17 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       <div class="npc-card">
         <h4>Offensive</h4>
         <p class="npc-li"><b>ATK Min/Max</b> — da arma + bonus.</p>
-        <p class="npc-li"><b>Velocità Attacco %</b> — riduce il CD: <br><span class="subtle">atkCdEff = max(180ms, base * (1 - atkSpeed))</span></p>
+        <p class="npc-li"><b>Velocità Attacco %</b> — riduce il CD: <span class="subtle">max(180ms, base * (1 - atkSpeed))</span></p>
         <p class="npc-li"><b>Crit Chance %</b> — base + Luck.</p>
-        <p class="npc-li"><b>Crit Damage %</b> — danno critico: <br><span class="subtle">dmgCrit = base * (1 + critDmg)</span></p>
+        <p class="npc-li"><b>Crit Damage %</b> — <span class="subtle">dmgCrit = base * (1 + critDmg)</span></p>
         <p class="npc-li"><b>Luck %</b> — aumenta Crit Chance.</p>
       </div>
       <div class="npc-card">
         <h4>Difensive</h4>
         <p class="npc-li"><b>HP Max</b> — da armatura + bonus.</p>
-        <p class="npc-li"><b>Difesa</b> — sottrae danno: <br><span class="subtle">dmg = max(0, dmg - defense)</span></p>
-        <p class="npc-li"><b>Mitigazione %</b> — riduce il resto: <br><span class="subtle">dmg = dmg * (1 - mitigation)</span> (cap 60%)</p>
-        <p class="npc-li"><b>Res. Proiettili %</b> — solo colpi arcieri: <br><span class="subtle">dopo miti</span></p>
+        <p class="npc-li"><b>Difesa</b> — sottrae danno.</p>
+        <p class="npc-li"><b>Mitigazione %</b> — riduce il resto (cap 60%).</p>
+        <p class="npc-li"><b>Res. Proiettili %</b> — colpi arcieri.</p>
         <p class="npc-li"><b>Res. Bleed %</b> — riduce danni/durata sanguinamento (cap 70%).</p>
       </div>
     </div>
@@ -152,8 +153,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 
 <script>
 (function(){
-  const BUILD='MAESTRO+EQUIP+SKILLSHOT+FIXPATH+HOMING';
-  const SAVE_KEY='save_maestro_equip';
+  const BUILD='MANA+QWE+HUD';
+  const SAVE_KEY='save_maestro_equip_mana_qwe';
   const cv=document.getElementById('game'); const ctx=cv.getContext('2d');
 
   const statusEl=document.getElementById('status');
@@ -208,21 +209,20 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function isPortalTile(world,x,y){ const l=WORLD.portals[world]||[]; for(let i=0;i<l.length;i++){ const p=l[i]; if(p.x===x&&p.y===y) return true; } return false; }
   function applyTheme(vars){ const root=document.documentElement.style; for(const k in vars) root.setProperty(k, vars[k]); }
 
-  /* === MAIN MAP FISSA (per sessione) === */
+  /* MAIN MAP fissa per sessione */
   let MAIN_MAP=null;
-  function cloneGrid(g){ const m=[]; for(let y=0;y<g.length;y++){ m[y]=g[y].slice(); } return m; }
+  function cloneGrid(g){ const m=[]; for(let y=0;y<g.length;y++) m[y]=g[y].slice(); return m; }
   function buildFixedMain(){
     if(MAIN_MAP) return cloneGrid(MAIN_MAP);
     const m=[]; for(let y=0;y<ROWS;y++){ const row=[]; for(let x=0;x<COLS;x++) row.push(0); m.push(row); }
     let placed=0, guard=0;
-    while(placed<16 && guard<500){
+    while(placed<16 && guard<600){
       guard++;
       const bx=(Math.random()*COLS|0), by=(Math.random()*ROWS|0);
       if(isPortalTile('main',bx,by)) continue;
       if(m[by][bx]===0){ m[by][bx]=1; placed++; }
     }
-    MAIN_MAP = m;
-    return cloneGrid(MAIN_MAP);
+    MAIN_MAP=m; return cloneGrid(MAIN_MAP);
   }
   function buildMap(name){
     if(name==='main'){ return {map:buildFixedMain(), theme:THEMES.main}; }
@@ -230,7 +230,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     return {map:m, theme:THEMES.spawn};
   }
 
-  /* Utils */
   function inside(x,y){ return x>=0&&y>=0&&x<COLS&&y<ROWS; }
   function rndInt(a,b){ return a+((Math.random()*(b-a+1))|0); }
   function walkable(x,y){ if(!inside(x,y)) return false; if(map[y][x]===1) return false; return true; }
@@ -240,7 +239,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
   function getVar(n){ const cs=getComputedStyle(document.documentElement); return cs.getPropertyValue(n).trim(); }
 
-  /* BFS (FIX: push corretto x,y) */
   function bfs(sx,sy,tx,ty){
     if(!walkable(tx,ty)) return null;
     const q=[{x:sx,y:sy}], prev={}, seen={}; let head=0; seen[sx+','+sy]=1;
@@ -253,8 +251,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       }
       for(let d=0; d<4; d++){
         const nx=c.x+dirs[d][0], ny=c.y+dirs[d][1], kk=nx+','+ny;
-        if(!walkable(nx,ny)||seen[kk]) continue; seen[kk]=1; prev[kk]={x:c.x,y:c.y};
-        q.push({x:nx, y:ny}); /* ← FIX */
+        if(!walkable(nx,ny)||seen[kk]) continue; seen[kk]=1; prev[kk]={x:c.x,y:c.y}; q.push({x:nx,y:ny});
       }
     }
     return null;
@@ -279,9 +276,15 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     if(has && now<o.vEnd){ let t=(now-o.vStart)/(o.vEnd-o.vStart); t=t*t*(3-2*t); o.vx=o.vFromX+(o.vToX-o.vFromX)*t; o.vy=o.vFromY+(o.vToY-o.vFromY)*t; }
     else { if(o.x!=null) o.vx=o.x; if(o.y!=null) o.vy=o.y; o.vStart=0; o.vEnd=0; }
   }
-  function updateTweens(){ const now=performance.now(); tweenUpdate(player,now); for(let i=0;i<enemies.length;i++) tweenUpdate(enemies[i],now); for(let j=0;j<projectiles.length;j++) tweenUpdate(projectiles[j],now); for(let k=0;k<skillshots.length;k++) tweenUpdate(skillshots[k],now); }
+  function updateTweens(){
+    const now=performance.now();
+    tweenUpdate(player,now);
+    for(let i=0;i<enemies.length;i++) tweenUpdate(enemies[i],now);
+    for(let j=0;j<projectiles.length;j++) tweenUpdate(projectiles[j],now);
+    for(let k=0;k<skillshots.length;k++) tweenUpdate(skillshots[k],now);
+  }
 
-  /* Player + stats */
+  /* Player + mana + skill state */
   const player={
     x:12,y:4,
     baseMaxHp:100, baseAtkMin:6, baseAtkMax:12,
@@ -290,12 +293,20 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     coins:0,pots:1,lastAtk:0,atkCd:450,lvl:1,exp:0,
     stats:{ atkSpeed:0.00, critDmg:0.50, luck:0.00, defense:0, mitigation:0.00, projRes:0.00, bleedRes:0.00 },
     status:{ bleed:null },
+    /* Dash */
     lastDash:0, dashCd:2200, iFrameUntil:0,
-    lastSkill:0, skillCd:2600, skillRange:8, skillMin:14, skillMax:22
+    /* Mana */
+    baseMaxMp:60, mpRegen:3.0, maxMp:60, mp:60,
+    /* Skills */
+    lastQ:0, qCd:2600, qCost:18,
+    lastW:0, wCd:1800, wCost:14,
+    lastE:0, eCd:1200, eCost:10,
+    /* Ranged base for skill damage */
+    skillRange:8, skillMin:14, skillMax:22
   };
   let equipped={
     weapon:{ name:'Coltellino', slot:'weapon', rarity:'common', icon:'🗡️', atkBonus:0, affix:{} },
-    armor: { name:'Tunica', slot:'armor',  rarity:'common', icon:'🛡️', hpBonus:0, affix:{} }
+    armor:  { name:'Tunica',     slot:'armor',  rarity:'common', icon:'🛡️', hpBonus:0,  affix:{} }
   };
 
   const MAX_LVL=99;
@@ -318,17 +329,17 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       player.stats.projRes    = clamp((player.stats.projRes   ||0)+.01,0,0.60);
       player.stats.bleedRes   = clamp((player.stats.bleedRes  ||0)+.01,0,0.70);
       player.stats.luck       = clamp((player.stats.luck      ||0)+.005,0,0.50);
+      player.baseMaxMp += 3;
     }
-    player.hp=Math.min(player.maxHp, player.hp + Math.round(player.maxHp*0.10));
-    recomputeStats(false);
+    recomputeStats(true);
     logSys('Level up → LV '+player.lvl);
     toast('LV '+player.lvl);
   }
 
   function effectiveStat(name){
     let v = player.stats[name]||0;
-    if(equipped.weapon && equipped.weapon.affix && equipped.weapon.affix[name]) v += equipped.weapon.affix[name];
-    if(equipped.armor  && equipped.armor .affix && equipped.armor .affix[name]) v += equipped.armor .affix[name];
+    if(equipped.weapon?.affix?.[name]) v += equipped.weapon.affix[name];
+    if(equipped.armor ?.affix?.[name]) v += equipped.armor .affix[name];
     return v;
   }
   function getCritChance(){ return clamp(player.baseCrit + effectiveStat('luck'), 0, 0.90); }
@@ -341,7 +352,10 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     player.maxHp=Math.round(player.baseMaxHp + hpB);
     player.atkMin=Math.round(player.baseAtkMin + atkB);
     player.atkMax=Math.round(player.baseAtkMax + atkB);
-    if(heal) player.hp=player.maxHp; if(player.hp>player.maxHp) player.hp=player.maxHp;
+    player.maxMp = Math.round(player.baseMaxMp);
+    if(heal){ player.hp=player.maxHp; player.mp=player.maxMp; }
+    if(player.hp>player.maxHp) player.hp=player.maxHp;
+    if(player.mp>player.maxMp) player.mp=player.maxMp;
     renderCharIfOpen(); renderNpcValues();
   }
 
@@ -387,37 +401,37 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     }
   }
 
-  /* Init spawn */
   (function initSpawn(){
     const res=buildMap('spawn'); map=res.map; applyTheme(res.theme); WORLD.current='spawn'; enemies.length=0; recomputeStats(true);
     ensureSpawnNpcs();
   })();
 
   /* HUD */
-  const HUD={ atk:null, pot:null, dash:null, skill:null, char:null };
+  const HUD={ atk:null, pot:null, dash:null, q:null, w:null, e:null, char:null };
   function layoutHud(){
-    HUD.atk   = { x: cv.width - 86,  y: cv.height - 86, w: 72, h: 72 };
-    HUD.pot   = { x: cv.width - 166, y: cv.height - 86, w: 72, h: 72 };
-    HUD.dash  = { x: cv.width - 246, y: cv.height - 86, w: 72, h: 72 };
-    HUD.skill = { x: cv.width - 326, y: cv.height - 86, w: 72, h: 72 };
-    HUD.char  = { x: cv.width - 86,  y: 14,             w: 72, h: 54  };
+    const yb=cv.height-86, w=72, gap=10;
+    HUD.atk   = { x: cv.width - (w+14),         y: yb, w, h:w };
+    HUD.pot   = { x: cv.width - (w*2+14+gap),   y: yb, w, h:w };
+    HUD.dash  = { x: cv.width - (w*3+14+gap*2), y: yb, w, h:w };
+    HUD.q     = { x: cv.width - (w*4+14+gap*3), y: yb, w, h:w };
+    HUD.w     = { x: cv.width - (w*5+14+gap*4), y: yb, w, h:w };
+    HUD.e     = { x: cv.width - (w*6+14+gap*5), y: yb, w, h:w };
+    HUD.char  = { x: cv.width - 86, y: 14, w: 72, h: 54 };
   }
   window.addEventListener('resize', layoutHud, false);
   layoutHud();
 
-  /* Input/selection state */
+  /* Input/selection */
   let target=null, autoChase=false, lastEnemyTapTs=0, lastEnemyTapId=-1;
   let selectedNpc=null, lastNpcTapTs=0, lastNpcTapId=-1;
 
   let pathQueue=[], destMarker=null;
   let dead=false, lastMoveDir={dx:1,dy:0};
 
-  /* Buttons */
   btnChar.onclick=()=>{ charWin.classList.toggle('hidden'); renderCharPanel(); };
   charClose.onclick=()=>{ charWin.classList.add('hidden'); };
   npcClose.onclick=()=>npcWin.classList.add('hidden');
 
-  /* Pointer helpers */
   function canvasToTile(ev){
     const r=cv.getBoundingClientRect(), t=ev.touches&&ev.touches[0];
     const cx=t?t.clientX:ev.clientX, cy=t?t.clientY:ev.clientY;
@@ -429,7 +443,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function enemyRect(e){ const x=e.x*TILE+TILE/2-16, y=e.y*TILE+TILE/2-22; return {x,y,w:32,h:36}; }
   function inRect(px,py,r){ return px>=r.x&&px<=r.x+r.w&&py>=r.y&&py<=r.y+r.h; }
   function getEnemyAtScreen(sx,sy){ for(let i=0;i<enemies.length;i++){ const ee=enemies[i]; if(inRect(sx,sy,enemyRect(ee))) return ee; } return null; }
-
   function npcRect(n){ const x=n.x*TILE+TILE/2-16, y=n.y*TILE+TILE/2-24; return {x,y,w:32,h:40}; }
   function getNpcAtScreen(sx,sy){
     if(WORLD.current!=='spawn') return null;
@@ -437,7 +450,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     return null;
   }
 
-  /* CLICK HANDLER: single = select, double = interact */
   function onPointerUp(ev){
     if(dead) return;
     const m=canvasToTile(ev), now=performance.now();
@@ -446,7 +458,9 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     if(inRect(m.sx,m.sy,HUD.atk)){ tryAttackAdjacent(); return; }
     if(inRect(m.sx,m.sy,HUD.pot)){ usePotion(); return; }
     if(inRect(m.sx,m.sy,HUD.dash)){ tryDash(); return; }
-    if(inRect(m.sx,m.sy,HUD.skill)){ trySkillshot(); return; }
+    if(inRect(m.sx,m.sy,HUD.q)){ trySkillQ(); return; }
+    if(inRect(m.sx,m.sy,HUD.w)){ trySkillW(); return; }
+    if(inRect(m.sx,m.sy,HUD.e)){ trySkillE(); return; }
     if(inRect(m.sx,m.sy,HUD.char)){ charWin.classList.toggle('hidden'); renderCharPanel(); return; }
 
     // NPC
@@ -467,12 +481,12 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       if(lastEnemyTapId===clicked.id && (now-lastEnemyTapTs)<=350){
         target=clicked; autoChase=true; pathQueue=[]; toast('Auto-inseguimento');
       } else {
-        target=clicked; autoChase=false; // solo selezione
+        target=clicked; autoChase=false;
       }
       lastEnemyTapId=clicked.id; lastEnemyTapTs=now; updateTargetFrame(); draw(); return;
     }
 
-    // Clic su terreno → muovi (continua fino a destinazione)
+    // Terreno → muovi
     autoChase=false;
     const p=bfs(player.x,player.y,m.tx,m.ty);
     if(p && p.length){
@@ -486,18 +500,18 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     if(target && chebyshev(player,target)===1 && (now-player.lastAtk)>=getAtkCd()) { attackEnemy(target); return; }
     draw(); updateTargetFrame();
   }
-
-  /* SOLO pointerup — niente click doppio-evento */
   cv.addEventListener('pointerup', onPointerUp, {passive:false});
 
   window.addEventListener('keydown', (e)=>{
     if(e.code==='Space'||e.key===' '){
       e.preventDefault();
-      if(target) autoChase = true;      // abilita autoclick via spazio
+      if(target) autoChase = true;
       tryAttackAdjacent();
     }
     if(e.code==='KeyF') tryDash();
-    if(e.code==='KeyQ') trySkillshot();
+    if(e.code==='KeyQ') trySkillQ();
+    if(e.code==='KeyW') trySkillW();
+    if(e.code==='KeyE') trySkillE();
   }, false);
 
   function tryAttackAdjacent(){
@@ -514,7 +528,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function drawDmgTexts(){ for(let i=0;i<dmgTexts.length;i++){ const d=dmgTexts[i]; const a=Math.max(0,Math.min(1,d.ttl/700)); ctx.save(); ctx.globalAlpha=a; ctx.fillStyle=d.color; ctx.font='bold 16px system-ui'; ctx.textAlign='center'; ctx.fillText(d.txt,d.x,d.y); ctx.restore(); } }
   function rollCrit(ch){ return Math.random() < ch; }
 
-  /* Loot/equip helpers */
+  /* Loot / equip (identico a prima con fix quote) */
   function pick(arr){ return arr[(Math.random()*arr.length)|0]; }
   function genWeapon(rarity){
     const baseNames={ uncommon:['Pugnale Rozzo','Spada Leggera','Ascia di Rame'], rare:['Lama del Falco','Sciabola Runica'] };
@@ -673,7 +687,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     player.hp=player.maxHp; player.status.bleed=null; player.iFrameUntil=0;
     enemies.length=0; projectiles.length=0; skillshots.length=0; pathQueue=[];
     selectedNpc=null;
-    ensureSpawnNpcs();
     dead=false; deathOverlay.classList.add('hidden'); cv.style.filter=''; cv.style.opacity='';
     teleportGuardUntil=performance.now()+600;
     entryAggroSilenceUntil=performance.now()+900;
@@ -681,7 +694,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   };
   deathReset.onclick=()=>location.reload();
 
-  /* LoS */
   function hasLoS(ax,ay,bx,by){
     if(ax===bx){ const step=(ay<by)?1:-1; for(let y=ay+step; y!==by; y+=step){ if(map[y][ax]===1) return false; } return true; }
     if(ay===by){ const st=(ax<bx)?1:-1; for(let x=ax+st; x!==bx; x+=st){ if(map[ay][x]===1) return false; } return true; }
@@ -694,15 +706,11 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   let mustMoveOffExit=false;
   let lastExit={x:-1,y:-1};
   function setPlayerPos(x,y){ player.x=x; player.y=y; player.vx=x; player.vy=y; }
+  function movedOffExitTile(){ return !(player.x===lastExit.x && player.y===lastExit.y); }
 
   function findSafeExit(worldName, px, py, minGapFromPortal){
     const gap = (minGapFromPortal==null)?1:minGapFromPortal;
-    const candidates = [
-      [ 1, 0],[-1, 0],[ 0, 1],[ 0,-1],
-      [ 1, 1],[-1, 1],[ 1,-1],[-1,-1],
-      [ 2, 0],[-2, 0],[ 0, 2],[ 0,-2],
-      [ 3, 0],[-3, 0],[ 0, 3],[ 0,-3]
-    ];
+    const candidates = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1],[2,0],[-2,0],[0,2],[0,-2],[3,0],[-3,0],[0,3],[0,-3]];
     function isNearPortal(wx,wy){ const list=WORLD.portals[worldName]||[]; for(let i=0;i<list.length;i++){ const p=list[i]; if(Math.abs(wx-p.x)<=gap && Math.abs(wy-p.y)<=gap) return true; } return false; }
     for(const d of candidates){
       const nx=clamp(px+d[0],0,COLS-1), ny=clamp(py+d[1],0,ROWS-1);
@@ -712,8 +720,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       if(!tileFree(nx,ny)) continue;
       return {x:nx,y:ny};
     }
-    let fx=clamp(px+1,0,COLS-1), fy=py;
-    if(!walkable(fx,fy) || isPortalTile(worldName,fx,fy)) fx=clamp(px-1,0,COLS-1);
+    let fx=clamp(px+1,0,COLS-1), fy=py; if(!walkable(fx,fy) || isPortalTile(worldName,fx,fy)) fx=clamp(px-1,0,COLS-1);
     return {x:fx,y:fy};
   }
 
@@ -746,7 +753,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     return false;
   }
 
-  /* Render */
+  /* Draw */
   function draw(){
     ctx.clearRect(0,0,cv.width,cv.height);
     for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
@@ -756,11 +763,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     drawPortals();
 
     if(WORLD.current==='spawn'){
-      for(let i=0;i<NPCS.length;i++){
-        const n=NPCS[i];
-        drawNpc(n);
-        if(selectedNpc===n) drawNpcRing(n.x, n.y);
-      }
+      for(let i=0;i<NPCS.length;i++){ const n=NPCS[i]; drawNpc(n); if(selectedNpc===n) drawNpcRing(n.x,n.y); }
     }
 
     for(let i=0;i<enemies.length;i++){
@@ -771,19 +774,17 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     }
 
     const pxv=(player.vx!=null?player.vx:player.x), pyv=(player.vy!=null?player.vy:player.y);
-    drawActor(pxv,pyv,getVar('--player')); drawHpBar(pxv,pyv,player.hp,player.maxHp,false,false);
+    drawActor(pxv,pyv,getVar('--player')); drawHpMpBars(pxv,pyv,player.hp,player.maxHp,player.mp,player.maxMp);
 
-    // Proiettili nemici
     for(let p=0;p<projectiles.length;p++){
       const pr=projectiles[p]; const ptx=(pr.vx!=null?pr.vx:pr.x), pty=(pr.vy!=null?pr.vy:pr.y);
       const x=ptx*TILE+TILE/2, y=pty*TILE+TILE/2; ctx.fillStyle='#f87171'; ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
     }
-    // Skillshot nostri
     for(let s=0;s<skillshots.length;s++){
       const pr=skillshots[s];
       const ptx=(pr.vx!=null?pr.vx:pr.x), pty=(pr.vy!=null?pr.vy:pr.y);
       const x=ptx*TILE+TILE/2, y=pty*TILE+TILE/2;
-      ctx.fillStyle='#38bdf8';
+      ctx.fillStyle=(pr.kind==='q')?'#38bdf8':(pr.kind==='e')?'#93c5fd':'#60a5fa';
       ctx.beginPath(); ctx.arc(x,y,7,0,Math.PI*2); ctx.fill();
     }
 
@@ -794,7 +795,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     const ratio=(player.lvl<MAX_LVL)?Math.min(1,player.exp/need):1;
     const guardLeft=Math.max(0, teleportGuardUntil - performance.now())|0;
     const aggroSilLeft=Math.max(0, entryAggroSilenceUntil - performance.now())|0;
-    statusEl.textContent=`build:${BUILD} | LV ${player.lvl} ${player.lvl<MAX_LVL?('('+Math.floor(ratio*100)+'%)'):''} | HP ${player.hp}/${player.maxHp} | ATK ${player.atkMin}–${player.atkMax} | monete ${player.coins} | AggroSil ${aggroSilLeft}ms | TPGuard ${guardLeft}ms`;
+    statusEl.textContent=`build:${BUILD} | LV ${player.lvl} ${player.lvl<MAX_LVL?('('+Math.floor(ratio*100)+'%)'):''} | HP ${player.hp}/${player.maxHp} | MP ${Math.floor(player.mp)}/${player.maxMp} | ATK ${player.atkMin}–${player.atkMax} | monete ${player.coins} | AggroSil ${aggroSilLeft}ms | TPGuard ${guardLeft}ms`;
   }
   function drawPortals(){
     const list=WORLD.portals[WORLD.current]||[];
@@ -819,17 +820,42 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     ctx.fillStyle=col; ctx.fillRect(px,py,w*r,h);
     ctx.strokeStyle=isTarget?'#f87171':'#0008'; ctx.lineWidth=isTarget?2:1; ctx.strokeRect(px,py,w,h); ctx.lineWidth=1;
   }
+  function drawHpMpBars(tx,ty,hp,maxHp,mp,maxMp){
+    drawHpBar(tx,ty,hp,maxHp,false,false);
+    const x=tx*TILE, y=ty*TILE, w=40, h=4, px=x+TILE/2-w/2, py=y+TILE/2-24;
+    const r=Math.max(0,Math.min(1,mp/maxMp));
+    ctx.fillStyle='#0b274a'; ctx.fillRect(px,py,w,h);
+    ctx.fillStyle=getVar('--mp'); ctx.fillRect(px,py,w*r,h);
+    ctx.strokeStyle='#0008'; ctx.strokeRect(px,py,w,h);
+  }
   function drawTargetRing(tx,ty){ const x=tx*TILE+TILE/2, y=ty*TILE+TILE/2; ctx.save(); ctx.strokeStyle='#ef4444'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(x,y,28,0,Math.PI*2); ctx.stroke(); ctx.restore(); }
   function drawNpcRing(tx,ty){ const x=tx*TILE+TILE/2, y=ty*TILE+TILE/2; ctx.save(); ctx.strokeStyle='#facc15'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(x,y,26,0,Math.PI*2); ctx.stroke(); ctx.restore(); }
-  function drawHudBtn(r, glyph, enabled){ ctx.save(); ctx.globalAlpha=enabled?1:0.55; ctx.fillStyle='rgba(15,23,42,.85)'; ctx.strokeStyle='#1f2a44'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(r.x+12,r.y); ctx.arcTo(r.x+r.w,r.y,r.x+r.w,r.y+r.h,12); ctx.arcTo(r.x+r.w,r.y+r.h,r.x,r.y+r.h,12); ctx.arcTo(r.x,r.y+r.h,r.x,r.y,12); ctx.arcTo(r.x,r.y,r.x+r.w,r.y,12); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.font='28px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#e5e7eb'; ctx.fillText(glyph, r.x + r.w/2, r.y + r.h/2); ctx.restore(); }
+  function drawHudBtn(r, glyph, enabled, label){
+    ctx.save();
+    ctx.globalAlpha=enabled?1:0.55;
+    ctx.fillStyle='rgba(15,23,42,.85)';
+    ctx.strokeStyle='#1f2a44'; ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(r.x+12,r.y);
+    ctx.arcTo(r.x+r.w,r.y,r.x+r.w,r.y+r.h,12);
+    ctx.arcTo(r.x+r.w,r.y+r.h,r.x,r.y+r.h,12);
+    ctx.arcTo(r.x,r.y+r.h,r.x,r.y,12);
+    ctx.arcTo(r.x,r.y,r.x+r.w,r.y,12);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.font='26px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#e5e7eb';
+    ctx.fillText(glyph, r.x + r.w/2, r.y + r.h/2);
+    if(label){ ctx.font='10px system-ui'; ctx.fillStyle='#cbd5e1'; ctx.fillText(label, r.x + r.w/2, r.y + r.h - 8); }
+    ctx.restore();
+  }
   function drawHud(){
-    drawHudBtn(HUD.atk,   '🗡️', (performance.now()-player.lastAtk)>=getAtkCd());
-    drawHudBtn(HUD.pot,   '🍵', player.pots>0);
-    const canDash=(performance.now()-player.lastDash)>=player.dashCd;
-    drawHudBtn(HUD.dash,  '⚡', canDash);
-    const canSkill=(performance.now()-player.lastSkill)>=player.skillCd;
-    drawHudBtn(HUD.skill, '🎯', canSkill);
-    drawHudBtn(HUD.char,  '👤', true);
+    drawHudBtn(HUD.atk, '🗡️', (performance.now()-player.lastAtk)>=getAtkCd(), 'SPAZIO');
+    drawHudBtn(HUD.pot, '🍵', player.pots>0, 'POT');
+    drawHudBtn(HUD.dash, '⚡', (performance.now()-player.lastDash)>=player.dashCd, 'F');
+    drawHudBtn(HUD.q, '🎯', (performance.now()-player.lastQ)>=player.qCd && player.mp>=player.qCost, 'Q');
+    drawHudBtn(HUD.w, '🌀', (performance.now()-player.lastW)>=player.wCd && player.mp>=player.wCost, 'W');
+    drawHudBtn(HUD.e, '➖', (performance.now()-player.lastE)>=player.eCd && player.mp>=player.eCost, 'E');
+    drawHudBtn(HUD.char, '👤', true, '');
+
     if(destMarker && destMarker.ttl>0){
       const a=Math.min(1, destMarker.ttl/400);
       ctx.save(); ctx.globalAlpha=a; ctx.strokeStyle='#93c5fd'; ctx.lineWidth=2;
@@ -863,7 +889,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     if(now>=b.next){ takePlayerDamage(b.tick, 'BLEED ', 'bleed'); b.next=now+500; }
   }
 
-  /* Movement skills */
+  /* Movement */
   function tryDash(){
     const now=performance.now();
     if(now - player.lastDash < player.dashCd || dead) return;
@@ -875,8 +901,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       const tx=nx+dir.dx, ty=ny+dir.dy;
       if(!walkable(tx,ty)) break;
       let occ=false; for(let k=0;k<enemies.length;k++){ const e=enemies[k]; if(e.x===tx && e.y===ty){ occ=true; break; } }
-      if(occ) break;
-      nx=tx; ny=ty; steps++;
+      if(occ) break; nx=tx; ny=ty; steps++;
     }
     if(steps===0) return;
     const fx=player.x, fy=player.y; setPlayerPos(nx,ny); startTween(player,fx,fy,player.x,player.y,now);
@@ -884,11 +909,11 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     toast('Dash'); draw();
   }
 
-  /* Skillshot — ora HOMING se hai un target */
-  function trySkillshot(){
+  /* === SKILL: Q (homing projectile) === */
+  function trySkillQ(){
     const now=performance.now();
-    if(now - player.lastSkill < player.skillCd || dead) return;
-
+    if(now - player.lastQ < player.qCd || dead) return;
+    if(player.mp < player.qCost){ toast('MP insufficienti'); return; }
     // direzione iniziale
     let dir={dx:lastMoveDir.dx, dy:lastMoveDir.dy};
     if(target){
@@ -897,16 +922,88 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       if(dir.dx===0 && dir.dy===0) dir={dx:lastMoveDir.dx,dy:lastMoveDir.dy};
     }
     if(dir.dx===0 && dir.dy===0) dir={dx:1,dy:0};
-
-    const p={ x:player.x, y:player.y, dx:dir.dx, dy:dir.dy, spdTick:0, vx:player.x, vy:player.y,
+    const p={ kind:'q', x:player.x, y:player.y, dx:dir.dx, dy:dir.dy, spdTick:0, vx:player.x, vy:player.y,
               rangeLeft:player.skillRange, min:player.skillMin, max:player.skillMax,
               homing: !!target, targetId: target ? target.id : null };
     skillshots.push(p);
-    player.lastSkill=now;
-    toast(p.homing?'Skillshot (homing)':'Skillshot');
+    player.lastQ=now; player.mp=Math.max(0, player.mp - player.qCost);
+    toast(p.homing?'Q Homing':'Q');
   }
 
-  /* AI helper: posizione di fuoco per arciere */
+  /* === SKILL: W (cono istantaneo 3x1 davanti) === */
+  function trySkillW(){
+    const now=performance.now();
+    if(now - player.lastW < player.wCd || dead) return;
+    if(player.mp < player.wCost){ toast('MP insufficienti'); return; }
+    // direzione dal target o ultima mossa
+    let dir={dx:lastMoveDir.dx, dy:lastMoveDir.dy};
+    if(target){
+      const dx=Math.sign(target.x-player.x), dy=Math.sign(target.y-player.y);
+      if(dx||dy) dir={dx,dy};
+    }
+    if(dir.dx===0 && dir.dy===0) dir={dx:1,dy:0};
+    // celle colpite: 1-2-3 davanti lungo la direzione (linea, stile “cono stretto”)
+    const hits=[];
+    let cx=player.x, cy=player.y;
+    for(let i=1;i<=3;i++){
+      cx+=dir.dx; cy+=dir.dy;
+      if(!inside(cx,cy)||map[cy][cx]===1) break;
+      hits.push({x:cx,y:cy});
+    }
+    // applica danno
+    const min = Math.max(6, Math.floor(player.skillMin*0.7));
+    const max = Math.max(9, Math.floor(player.skillMax*0.85));
+    const dealt=new Set();
+    for(const h of hits){
+      for(const e of enemies){
+        if(e.x===h.x && e.y===h.y && !dealt.has(e.id)){
+          const base=rndInt(min,max);
+          const crit=rollCrit(getCritChance());
+          const mult=crit?getCritMult():1;
+          const dmg=Math.max(0, Math.floor(base*mult));
+          e.hp=Math.max(0, e.hp-dmg);
+          dealt.add(e.id);
+          addDmgText(e.x,e.y,(crit?'CRIT ':'')+dmg,'#60a5fa');
+        }
+      }
+    }
+    // rimuovi morti
+    for(let i=enemies.length-1;i>=0;i--){
+      if(enemies[i].hp<=0){
+        const deadE=enemies[i];
+        if(target===deadE){ target=null; autoChase=false; }
+        enemies.splice(i,1);
+        logSys('Nemico sconfitto. +25 XP');
+        gainXP(25);
+        handleDrop();
+        setTimeout(()=>{ if(WORLD.current==='main'){ const s=randEmpty(); enemies.push(makeArcher(s.x,s.y)); } },1000);
+      }
+    }
+    player.lastW=now; player.mp=Math.max(0, player.mp - player.wCost);
+    toast('W Cono');
+    draw();
+  }
+
+  /* === SKILL: E (proiettile perforante rettilineo) === */
+  function trySkillE(){
+    const now=performance.now();
+    if(now - player.lastE < player.eCd || dead) return;
+    if(player.mp < player.eCost){ toast('MP insufficienti'); return; }
+    // direzione fissa (no homing)
+    let dir={dx:lastMoveDir.dx, dy:lastMoveDir.dy};
+    if(target){
+      const dx=Math.sign(target.x-player.x), dy=Math.sign(target.y-player.y);
+      if(dx||dy) dir={dx,dy};
+    }
+    if(dir.dx===0 && dir.dy===0) dir={dx:1,dy:0};
+    const p={ kind:'e', x:player.x, y:player.y, dx:dir.dx, dy:dir.dy, spdTick:0, vx:player.x, vy:player.y,
+              rangeLeft:player.skillRange+2, min:player.skillMin-2, max:player.skillMax-1, pierce:2 };
+    skillshots.push(p);
+    player.lastE=now; player.mp=Math.max(0, player.mp - player.eCost);
+    toast('E Piercing');
+  }
+
+  /* AI helper */
   function findFiringPath(e){
     let best=null, bestLen=1e9;
     for(let ry=-6; ry<=6; ry++){
@@ -932,9 +1029,12 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       const now=performance.now();
       const dt=Math.min(200, now-lastStepTs)|0; lastStepTs=now;
 
-      if(mustMoveOffExit && !(player.x===lastExit.x && player.y===lastExit.y)) mustMoveOffExit=false;
+      // MP regen
+      player.mp = Math.min(player.maxMp, player.mp + player.mpRegen * (dt/1000));
 
-      // Player path follow (continua lungo l'intero path)
+      if(mustMoveOffExit && movedOffExitTile()) mustMoveOffExit=false;
+
+      // player path following
       if(!dead && pathQueue.length){
         const next=pathQueue[0];
         let blocked=!walkable(next.x,next.y);
@@ -947,7 +1047,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         }
       }
 
-      // Portali
       checkPortalEnter();
 
       // Enemy AI
@@ -1009,7 +1108,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         }
       }
 
-      // Proiettili nemici
+      // Enemy projectiles
       for(let pi=projectiles.length-1; pi>=0; pi--){
         const pr=projectiles[pi];
         pr.spdTick=(pr.spdTick+1)%2; if(pr.spdTick!==0) continue;
@@ -1024,24 +1123,21 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         startTween(pr, pr.x, pr.y, nx, ny, now); pr.x=nx; pr.y=ny;
       }
 
-      // Skillshot nostri (HOMING se assegnato targetId)
+      // Our skillshots
       for(let si=skillshots.length-1; si>=0; si--){
         const pr=skillshots[si];
 
-        // Homing: aggiorna direzione verso il target selezionato, se esiste ancora
-        if(pr.homing){
+        if(pr.kind==='q' && pr.homing){
           let tgt=null;
           if(pr.targetId!=null){
             for(let i=0;i<enemies.length;i++){ if(enemies[i].id===pr.targetId){ tgt=enemies[i]; break; } }
           } else if(target){ tgt=target; }
           if(tgt){
             const dx=tgt.x - pr.x, dy=tgt.y - pr.y;
-            // priorità all’asse più lontano; fallback se muro
             let ndx = Math.sign(Math.abs(dx)>=Math.abs(dy) ? dx : 0);
             let ndy = Math.sign(Math.abs(dy)> Math.abs(dx) ? dy : 0);
-            // se direzione scelta blocca, prova l'altra
             if((ndx||ndy) && (!inside(pr.x+ndx,pr.y+ndy) || map[pr.y+ndy][pr.x+ndx]===1)){
-              if(ndx!==0){ // prova verticale
+              if(ndx!==0){
                 const sdy=Math.sign(dy);
                 if(inside(pr.x,pr.y+sdy) && map[pr.y+sdy][pr.x]!==1){ ndx=0; ndy=sdy; }
               }else if(ndy!==0){
@@ -1053,34 +1149,49 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
           }
         }
 
-        pr.spdTick=(pr.spdTick+1)%1; // 1 tile per tick
+        pr.spdTick=(pr.spdTick+1)%1; // 1 tile/tick
         const nx=pr.x+pr.dx, ny=pr.y+pr.dy;
         if(!inside(nx,ny) || map[ny][nx]===1){ skillshots.splice(si,1); continue; }
-        let hit=null;
-        for(let i=0;i<enemies.length;i++){ const e=enemies[i]; if(e.x===nx && e.y===ny){ hit=e; break; } }
-        if(hit){
-          const base=rndInt(pr.min, pr.max);
-          const crit=rollCrit(getCritChance());
-          const mult=crit?getCritMult():1;
-          const dmg=Math.max(0, Math.floor(base*mult));
-          hit.hp=Math.max(0, hit.hp-dmg);
-          addDmgText(hit.x,hit.y,(crit?'CRIT ':'')+dmg,'#38bdf8');
-          if(hit.hp===0){
-            if(target===hit){ target=null; autoChase=false; }
-            logSys('Nemico sconfitto. +25 XP');
-            enemies.splice(enemies.indexOf(hit),1);
-            gainXP(25);
-            handleDrop();
-            setTimeout(()=>{ if(WORLD.current==='main'){ const s=randEmpty(); enemies.push(makeArcher(s.x,s.y)); } }, 1000);
+
+        // check hit
+        let hits=[];
+        for(let i=0;i<enemies.length;i++){ const e=enemies[i]; if(e.x===nx && e.y===ny){ hits.push(e); } }
+
+        if(hits.length){
+          for(const hit of hits){
+            const base=rndInt(pr.min, pr.max);
+            const crit=rollCrit(getCritChance());
+            const mult=crit?getCritMult():1;
+            const dmg=Math.max(0, Math.floor(base*mult));
+            hit.hp=Math.max(0, hit.hp-dmg);
+            addDmgText(hit.x,hit.y,(crit?'CRIT ':'')+dmg, pr.kind==='e'?'#93c5fd':'#38bdf8');
           }
-          skillshots.splice(si,1);
+          // gestione perforazione E
+          if(pr.kind==='e' && pr.pierce>0){
+            pr.pierce--; // continua il viaggio
+          }else{
+            skillshots.splice(si,1);
+          }
+          // rimuovi morti
+          for(let i=enemies.length-1;i>=0;i--){
+            if(enemies[i].hp<=0){
+              const deadE=enemies[i];
+              if(target===deadE){ target=null; autoChase=false; }
+              enemies.splice(i,1);
+              logSys('Nemico sconfitto. +25 XP');
+              gainXP(25);
+              handleDrop();
+              setTimeout(()=>{ if(WORLD.current==='main'){ const s=randEmpty(); enemies.push(makeArcher(s.x,s.y)); } },1000);
+            }
+          }
           continue;
         }
+
         startTween(pr, pr.x, pr.y, nx, ny, now); pr.x=nx; pr.y=ny;
         pr.rangeLeft--; if(pr.rangeLeft<=0){ skillshots.splice(si,1); continue; }
       }
 
-      // Auto-chase & auto-attack (solo se attivo)
+      // auto-chase/attack
       if(autoChase && target && !dead){
         const stillThere = enemies.indexOf(target)!==-1;
         if(!stillThere){ autoChase=false; target=null; }
@@ -1113,7 +1224,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     const fx=e.x, fy=e.y; e.x=nxt.x; e.y=nxt.y; startTween(e,fx,fy,e.x,e.y,now);
   }
 
-  /* Panels */
+  /* Panel render */
   function pct(v){ return Math.round((v||0)*100); }
   function renderCharPanel(){
     if(charWin.classList.contains('hidden')) return;
@@ -1122,6 +1233,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       ['Livello','LV '+player.lvl],
       ['XP',''+player.exp+' / '+(player.lvl<MAX_LVL?need:'—')],
       ['HP',''+player.hp+' / '+player.maxHp],
+      ['MP',''+Math.floor(player.mp)+' / '+player.maxMp],
       ['Attacco',''+player.atkMin+'–'+player.atkMax],
       ['Crit Chance', pct(getCritChance())+'%'],
       ['Crit Damage', pct(effectiveStat('critDmg'))+'%'],
@@ -1133,7 +1245,8 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       ['Res. Proiettili', pct(clamp(effectiveStat('projRes'),0,0.60))+'%'],
       ['Res. Bleed', pct(clamp(effectiveStat('bleedRes'),0,0.70))+'%'],
       ['Vel. Attacco', pct(clamp(effectiveStat('atkSpeed'),0,0.50))+'%'],
-      ['Luck (Crit +)', pct(effectiveStat('luck'))+'%']
+      ['Luck (Crit +)', pct(effectiveStat('luck'))+'%'],
+      ['MP Regen', player.mpRegen.toFixed(1)+'/s']
     ];
     const eq=[
       ['Arma', `${equipped.weapon.icon} ${equipped.weapon.name} <span class="subtle">(${equipped.weapon.rarity})</span><br>ATK +${equipped.weapon.atkBonus||0} <span class="subtle">· ${escapeHtml(formatAffix(equipped.weapon.affix||{}))}</span>`],
@@ -1152,6 +1265,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       `CD Attacco: <b>${getAtkCd()} ms</b>`,
       `Crit Chance: <b>${pct(getCritChance())}%</b> · Crit Dmg: <b>${pct(effectiveStat('critDmg'))}%</b>`,
       `HP Max: <b>${player.maxHp}</b>`,
+      `MP Max: <b>${player.maxMp}</b> · Regen: <b>${player.mpRegen.toFixed(1)}/s</b>`,
       `Difesa: <b>${effectiveStat('defense')|0}</b> · Mitigazione: <b>${pct(clamp(effectiveStat('mitigation'),0,0.60))}%</b>`,
       `Res. Proiettili: <b>${pct(clamp(effectiveStat('projRes'),0,0.60))}%</b> · Res. Bleed: <b>${pct(clamp(effectiveStat('bleedRes'),0,0.70))}%</b>`,
       `Vel. Attacco: <b>${pct(clamp(effectiveStat('atkSpeed'),0,0.50))}%</b> · Luck: <b>${pct(effectiveStat('luck'))}%</b>`
@@ -1189,7 +1303,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   };
   btnReset.onclick=()=>location.reload();
 
-  /* Kick loop */
   setInterval(step, 120);
   (function anim(){ updateTweens(); draw(); requestAnimationFrame(anim); })();
 
