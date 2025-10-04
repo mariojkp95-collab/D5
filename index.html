@@ -91,7 +91,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   <p class="help">
     Singolo tap su un <b>nemico</b> = seleziona · <b>doppio tap</b> = auto-inseguimento<br>
     Singolo tap su <b>Maestro</b> = seleziona · <b>doppio tap</b> = parla<br>
-    SPAZIO/🗡️ attacca · <b>F</b>/⚡ dash · <b>Q</b>/🎯 skillshot. Portale viola tra Spawn ↔ Main.
+    SPAZIO/🗡️ → se hai un target, attiva auto-inseguimento; <b>F</b>/⚡ dash; <b>Q</b>/🎯 skillshot. Portale viola tra Spawn ↔ Main.
   </p>
   <div id="status"></div>
 </main>
@@ -217,7 +217,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     let placed=0, guard=0;
     while(placed<16 && guard<500){
       guard++;
-      const bx=(Math.random()*COLS|0), by=(Math.random()*ROWS|0);
+      const bx=(Math.random()*COLS|0), by=(Math.random() * ROWS | 0);
       if(isPortalTile('main',bx,by)) continue;
       if(bx===COLS>>1 && by===ROWS>>1) continue;
       if(m[by][bx]===0){ m[by][bx]=1; placed++; }
@@ -254,7 +254,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       }
       for(let d=0; d<4; d++){
         const nx=c.x+dirs[d][0], ny=c.y+dirs[d][1], kk=nx+','+ny;
-        if(!walkable(nx,ny)||seen[kk]) continue; seen[kk]=1; prev[kk]={x:c.x,y:c.y}; q.push({x:nx,y:ny});
+        if(!walkable(nx,ny)||seen[kk]) continue; seen[kk]=1; prev[kk]={x:c.x,y:c.y}; q.push({x:nx,ny});
       }
     }
     return null;
@@ -455,7 +455,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       if(lastNpcTapId===npc.kind && (now-lastNpcTapTs)<=350){
         openMaestro();
       }else{
-        selectedNpc=npc; draw(); // selezione visuale
+        selectedNpc=npc; draw(); // selezione
       }
       lastNpcTapId=npc.kind; lastNpcTapTs=now;
       return;
@@ -486,11 +486,16 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     if(target && chebyshev(player,target)===1 && (now-player.lastAtk)>=getAtkCd()) { attackEnemy(target); return; }
     draw(); updateTargetFrame();
   }
+
+  /* SOLO pointerup — niente click doppio-evento */
   cv.addEventListener('pointerup', onPointerUp, {passive:false});
-  cv.addEventListener('click', onPointerUp, false);
 
   window.addEventListener('keydown', (e)=>{
-    if(e.code==='Space'||e.key===' ') tryAttackAdjacent();
+    if(e.code==='Space'||e.key===' '){
+      e.preventDefault();
+      if(target) autoChase = true;      // ← abilita autoclick via spazio
+      tryAttackAdjacent();
+    }
     if(e.code==='KeyF') tryDash();
     if(e.code==='KeyQ') trySkillshot();
   }, false);
