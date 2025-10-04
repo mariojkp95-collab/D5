@@ -89,9 +89,9 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 <main>
   <canvas id="game" width="1344" height="768" aria-label="Gioco"></canvas>
   <p class="help">
-    Tap per muoverti • tap su un nemico per <b>selezionarlo</b> • <b>doppio tap</b> su un nemico per auto-inseguire •
-    SPAZIO/🗡️ attacca · <b>F</b>/⚡ dash · <b>Q</b>/🎯 skillshot.
-    Portale viola tra Spawn ↔ Main. Parla con il <b>Maestro</b>.
+    Singolo tap su un <b>nemico</b> = seleziona · <b>doppio tap</b> = auto-inseguimento<br>
+    Singolo tap su <b>Maestro</b> = seleziona · <b>doppio tap</b> = parla<br>
+    SPAZIO/🗡️ attacca · <b>F</b>/⚡ dash · <b>Q</b>/🎯 skillshot. Portale viola tra Spawn ↔ Main.
   </p>
   <div id="status"></div>
 </main>
@@ -214,7 +214,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function buildFixedMain(){
     if(MAIN_MAP) return cloneGrid(MAIN_MAP);
     const m=[]; for(let y=0;y<ROWS;y++){ const row=[]; for(let x=0;x<COLS;x++) row.push(0); m.push(row); }
-    // Genera una volta: 16 blocchi, evitando portale e centrali
     let placed=0, guard=0;
     while(placed<16 && guard<500){
       guard++;
@@ -228,7 +227,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   }
   function buildMap(name){
     if(name==='main'){ return {map:buildFixedMain(), theme:THEMES.main}; }
-    // spawn senza blocchi
     const m=[]; for(let y=0;y<ROWS;y++){ const row=[]; for(let x=0;x<COLS;x++) row.push(0); m.push(row); }
     return {map:m, theme:THEMES.spawn};
   }
@@ -407,9 +405,11 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   window.addEventListener('resize', layoutHud, false);
   layoutHud();
 
-  /* Input state */
+  /* Input/selection state */
   let target=null, autoChase=false, lastEnemyTapTs=0, lastEnemyTapId=-1;
-  let pathQueue=[], holdTimer=null, destMarker=null;
+  let selectedNpc=null, lastNpcTapTs=0, lastNpcTapId=-1;
+
+  let pathQueue=[], destMarker=null;
   let dead=false, lastMoveDir={dx:1,dy:0};
 
   /* Buttons */
@@ -437,16 +437,9 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     return null;
   }
 
-  /* Pointer handlers */
-  function onPointerDown(ev){
-    if(dead) return;
-    const m=canvasToTile(ev), pos={sx:m.sx,sy:m.sy};
-    clearTimeout(holdTimer);
-    holdTimer=setTimeout(()=>{ const enemy=getEnemyAtScreen(pos.sx,pos.sy); if(enemy){ target=enemy; autoChase=true; pathQueue=[]; updateTargetFrame(); toast('Auto-inseguimento'); draw(); } },500);
-  }
+  /* CLICK HANDLER: single = select, double = interact */
   function onPointerUp(ev){
     if(dead) return;
-    clearTimeout(holdTimer);
     const m=canvasToTile(ev), now=performance.now();
 
     // HUD
@@ -456,19 +449,30 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     if(inRect(m.sx,m.sy,HUD.skill)){ trySkillshot(); return; }
     if(inRect(m.sx,m.sy,HUD.char)){ charWin.classList.toggle('hidden'); renderCharPanel(); return; }
 
-    // NPC Maestro
+    // NPC
     const npc=getNpcAtScreen(m.sx,m.sy);
-    if(npc){ openMaestro(); return; }
+    if(npc){
+      if(lastNpcTapId===npc.kind && (now-lastNpcTapTs)<=350){
+        openMaestro();
+      }else{
+        selectedNpc=npc; draw(); // selezione visuale
+      }
+      lastNpcTapId=npc.kind; lastNpcTapTs=now;
+      return;
+    }
 
-    // Target nemico (singolo click seleziona, doppio click auto-chase)
+    // Nemico
     const clicked=getEnemyAtScreen(m.sx,m.sy);
     if(clicked){
-      if(lastEnemyTapId===clicked.id && (now-lastEnemyTapTs)<=350){ target=clicked; autoChase=true; pathQueue=[]; toast('Auto-inseguimento'); }
-      else { target=clicked; autoChase=false; }
+      if(lastEnemyTapId===clicked.id && (now-lastEnemyTapTs)<=350){
+        target=clicked; autoChase=true; pathQueue=[]; toast('Auto-inseguimento');
+      } else {
+        target=clicked; autoChase=false; // solo selezione
+      }
       lastEnemyTapId=clicked.id; lastEnemyTapTs=now; updateTargetFrame(); draw(); return;
     }
 
-    // Movimento a terra
+    // Clic su terreno → muovi (non toccare selezioni)
     autoChase=false;
     const p=bfs(player.x,player.y,m.tx,m.ty);
     if(p && p.length){
@@ -482,7 +486,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     if(target && chebyshev(player,target)===1 && (now-player.lastAtk)>=getAtkCd()) { attackEnemy(target); return; }
     draw(); updateTargetFrame();
   }
-  cv.addEventListener('pointerdown', onPointerDown, {passive:false});
   cv.addEventListener('pointerup', onPointerUp, {passive:false});
   cv.addEventListener('click', onPointerUp, false);
 
@@ -506,7 +509,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   function drawDmgTexts(){ for(let i=0;i<dmgTexts.length;i++){ const d=dmgTexts[i]; const a=Math.max(0,Math.min(1,d.ttl/700)); ctx.save(); ctx.globalAlpha=a; ctx.fillStyle=d.color; ctx.font='bold 16px system-ui'; ctx.textAlign='center'; ctx.fillText(d.txt,d.x,d.y); ctx.restore(); } }
   function rollCrit(ch){ return Math.random() < ch; }
 
-  /* Loot/equip */
+  /* Loot/equip helpers (immutati) */
   function pick(arr){ return arr[(Math.random()*arr.length)|0]; }
   function genWeapon(rarity){
     const baseNames={ uncommon:['Pugnale Rozzo','Spada Leggera','Ascia di Rame'], rare:['Lama del Falco','Sciabola Runica'] };
@@ -515,17 +518,12 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     const aff={}; const pool=[ 'atkSpeed','critDmg','luck' ]; const nAff = rarity==='rare' ? 2 : 1;
     for(let i=0;i<nAff;i++){
       const k=pick(pool.filter(x=>!(x in aff)));
-      if(k==='atkSpeed') aff[k] = +(rarity==='rare' ? (Math.random()*0.05+0.03).toFixed(3) : (Math.random()*0.04+0.02).toFixed(3));
-      if(k==='critDmg') aff[k]   = +(rarity==='rare' ? (Math.random()*0.12+0.08).toFixed(3) : (Math.random()*0.08+0.05).toFixed(3));
-      if(k==='luck') aff[k]      = +(rarity==='rare' ? (Math.random()*0.06+0.03).toFixed(3) : (Math.random()*0.05+0.02).toFixed(3));
+      if(k==='atkSpeed') aff[k] = +(rarity==='rare ? (Math.random()*0.05+0.03).toFixed(3) : (Math.random()*0.04+0.02).toFixed(3));
     }
-    const name=pick(baseNames[rarity]);
-    return {slot:'weapon', icon, name, rarity, atkBonus, affix:aff};
+    return {slot:'weapon', icon, name:pick(baseNames[rarity]), rarity, atkBonus, affix:aff};
   }
   function genArmor(rarity){
-    const baseNames={ uncommon:['Giaco di Pelle','Mantello Grezzo','Cotta Leggera'], rare:['Corazza del Cacciatore','Mantello del Falco'] };
-    const icon='🛡️';
-    const hpBonus = rarity==='rare' ? rndInt(14,22) : rndInt(8,16);
+    const icon='🛡️', hpBonus = rarity==='rare' ? rndInt(14,22) : rndInt(8,16);
     const aff={}; const pool=[ 'defense','mitigation','projRes','bleedRes' ]; const nAff = rarity==='rare' ? 2 : 1;
     for(let i=0;i<nAff;i++){
       const k=pick(pool.filter(x=>!(x in aff)));
@@ -534,8 +532,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       if(k==='projRes') aff[k]    = +(rarity==='rare' ? (Math.random()*0.05+0.02).toFixed(3) : (Math.random()*0.04+0.01).toFixed(3));
       if(k==='bleedRes') aff[k]   = +(rarity==='rare' ? (Math.random()*0.08+0.03).toFixed(3) : (Math.random()*0.06+0.02).toFixed(3));
     }
-    const name=pick(baseNames[rarity]);
-    return {slot:'armor', icon, name, rarity, hpBonus, affix:aff};
+    return {slot:'armor', icon, name:pick({uncommon:['Giaco di Pelle','Mantello Grezzo','Cotta Leggera'], rare:['Corazza del Cacciatore','Mantello del Falco']}[rarity]), rarity, hpBonus, affix:aff};
   }
   function maybeDropEquip(){
     if(Math.random()<0.25){
@@ -660,6 +657,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     setPlayerPos(exit.x, exit.y);
     player.hp=player.maxHp; player.status.bleed=null; player.iFrameUntil=0;
     enemies.length=0; projectiles.length=0; skillshots.length=0; pathQueue=[];
+    selectedNpc=null;
     ensureSpawnNpcs();
     dead=false; deathOverlay.classList.add('hidden'); cv.style.filter=''; cv.style.opacity='';
     teleportGuardUntil=performance.now()+600;
@@ -675,7 +673,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     return false;
   }
 
-  /* Portals robusti */
+  /* Portali */
   let teleportGuardUntil=0;
   let entryAggroSilenceUntil=0;
   let mustMoveOffExit=false;
@@ -714,7 +712,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       const p=list[i];
       if(p.x===player.x && p.y===player.y){
         const next = buildMap(p.to); map=next.map; applyTheme(next.theme); WORLD.current=p.to;
-        if(WORLD.current==='main'){ spawnMain(); } else { enemies.length=0; projectiles.length=0; skillshots.length=0; ensureSpawnNpcs(); }
+        if(WORLD.current==='main'){ spawnMain(); selectedNpc=null; } else { enemies.length=0; projectiles.length=0; skillshots.length=0; ensureSpawnNpcs(); }
         const exit = findSafeExit(p.to, p.tx, p.ty, 1);
         setPlayerPos(exit.x, exit.y);
         pathQueue.length=0;
@@ -743,7 +741,11 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     drawPortals();
 
     if(WORLD.current==='spawn'){
-      for(let i=0;i<NPCS.length;i++){ const n=NPCS[i]; drawNpc(n); }
+      for(let i=0;i<NPCS.length;i++){
+        const n=NPCS[i];
+        drawNpc(n);
+        if(selectedNpc===n) drawNpcRing(n.x, n.y);
+      }
     }
 
     for(let i=0;i<enemies.length;i++){
@@ -803,6 +805,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     ctx.strokeStyle=isTarget?'#f87171':'#0008'; ctx.lineWidth=isTarget?2:1; ctx.strokeRect(px,py,w,h); ctx.lineWidth=1;
   }
   function drawTargetRing(tx,ty){ const x=tx*TILE+TILE/2, y=ty*TILE+TILE/2; ctx.save(); ctx.strokeStyle='#ef4444'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(x,y,28,0,Math.PI*2); ctx.stroke(); ctx.restore(); }
+  function drawNpcRing(tx,ty){ const x=tx*TILE+TILE/2, y=ty*TILE+TILE/2; ctx.save(); ctx.strokeStyle='#facc15'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(x,y,26,0,Math.PI*2); ctx.stroke(); ctx.restore(); }
   function drawHudBtn(r, glyph, enabled){ ctx.save(); ctx.globalAlpha=enabled?1:0.55; ctx.fillStyle='rgba(15,23,42,.85)'; ctx.strokeStyle='#1f2a44'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(r.x+12,r.y); ctx.arcTo(r.x+r.w,r.y,r.x+r.w,r.y+r.h,12); ctx.arcTo(r.x+r.w,r.y+r.h,r.x,r.y+r.h,12); ctx.arcTo(r.x,r.y+r.h,r.x,r.y,12); ctx.arcTo(r.x,r.y,r.x+r.w,r.y,12); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.font='28px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#e5e7eb'; ctx.fillText(glyph, r.x + r.w/2, r.y + r.h/2); ctx.restore(); }
   function drawHud(){
     drawHudBtn(HUD.atk,   '🗡️', (performance.now()-player.lastAtk)>=getAtkCd());
@@ -831,7 +834,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 
   /* Guards / helper */
   function updateTargetFrame(){}
-  function movedOffExitTile(){ return !(player.x===lastExit.x && player.y===lastExit.y); }
 
   /* Bleed */
   function applyBleed(baseTick, durationMs){
@@ -863,7 +865,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       nx=tx; ny=ty; steps++;
     }
     if(steps===0) return;
-    const fx=player.x, fy=player.y; setPlayerPos(nx,ny); startTween(player,fx,fy,nx,ny,now);
+    const fx=player.x, fy=player.y; setPlayerPos(nx,ny); startTween(player,fx,fy,player.x,player.y,now);
     player.lastDash=now; player.iFrameUntil=now+450;
     toast('Dash'); draw();
   }
@@ -888,13 +890,11 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
 
   /* AI helper: posizione di fuoco per arciere */
   function findFiringPath(e){
-    // cerca una casella entro r=6 che abbia LoS e distanza manhattan in [rangeMin, rangeMax]
     let best=null, bestLen=1e9;
     for(let ry=-6; ry<=6; ry++){
       for(let rx=-6; rx<=6; rx++){
         const tx=e.x+rx, ty=e.y+ry;
         if(!inside(tx,ty) || !walkable(tx,ty)) continue;
-        // evita occupate da altri nemici e dal player
         let occ=false; for(let k=0;k<enemies.length;k++){ const o=enemies[k]; if(o!==e && o.x===tx && o.y===ty){ occ=true; break; } }
         if(occ || (tx===player.x && ty===player.y)) continue;
         const distM=Math.abs(tx-player.x)+Math.abs(ty-player.y);
@@ -914,7 +914,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       const now=performance.now();
       const dt=Math.min(200, now-lastStepTs)|0; lastStepTs=now;
 
-      if(mustMoveOffExit && movedOffExitTile()) mustMoveOffExit=false;
+      if(mustMoveOffExit && !(player.x===lastExit.x && player.y===lastExit.y)) mustMoveOffExit=false;
 
       // Player path follow
       if(!dead && pathQueue.length){
@@ -957,33 +957,28 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
           const inRange = (distM>=e.rangeMin && distM<=e.rangeMax && hasLoS(e.x,e.y,player.x,player.y));
 
           if(distC===1){
-            // fallback melee ravvicinato (pugnalata)
             if(now - e.lastMelee >= e.meleeCd){
               e.lastMelee = now;
               const dmg=rndInt(e.meleeMin,e.meleeMax);
               takePlayerDamage(dmg, '-', 'melee');
             }
           } else if(inRange){
-            // spara
             if(now-e.lastShot>=e.atkCd){
               e.lastShot=now;
               setTimeout(()=>{
-                // direzione cardinale verso player
                 const dx=(player.x===e.x)?0:(player.x>e.x?1:-1);
                 const dy=(player.y===e.y)?0:(player.y>e.y?1:-1);
                 if(dx||dy) projectiles.push({x:e.x,y:e.y,dx,dy,spdTick:0,dmg:rndInt(6,10), vx:e.x, vy:e.y, vStart:0,vEnd:0, bleedChance:0.3});
               }, e.windupMs);
             }
-            // se troppo vicino e può muoversi, prova ad arretrare
             if(distM<e.rangeMin && canMove){
               const backX=e.x + (player.x<e.x?1:(player.x>e.x?-1:0));
-              const backY=e.y + (player.y<e.y?1:(player.y>e.y?-1:0));
+              const backY=e.y + (player.y<e.y)?1:(player.y>e.y?-1:0);
               if(walkable(backX,backY) && !(backX===player.x&&backY===player.y)){
                 const fx=e.x, fy=e.y; e.x=backX; e.y=backY; startTween(e,fx,fy,e.x,e.y,now);
               }
             }
           } else if(canMove){
-            // NON avvicinarsi per forza: trova una posizione di fuoco valida
             const path=findFiringPath(e);
             if(path && path.length) e.path=path;
             tryStepAlongPath(e, now);
@@ -1017,7 +1012,6 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
         pr.spdTick=(pr.spdTick+1)%1; // 1 tile per tick
         const nx=pr.x+pr.dx, ny=pr.y+pr.dy;
         if(!inside(nx,ny) || map[ny][nx]===1){ skillshots.splice(si,1); continue; }
-        // colpisce primo nemico
         let hit=null;
         for(let i=0;i<enemies.length;i++){ const e=enemies[i]; if(e.x===nx && e.y===ny){ hit=e; break; } }
         if(hit){
@@ -1137,7 +1131,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
     try{
       const raw=localStorage.getItem(SAVE_KEY); if(!raw) return alert('Nessun salvataggio.');
       const d=JSON.parse(raw);
-      if(d && d.MAIN_MAP) MAIN_MAP=d.MAIN_MAP; // preserva la mappa main fissa dal save
+      if(d && d.MAIN_MAP) MAIN_MAP=d.MAIN_MAP;
       if(d && d.map && d.map.length===ROWS){ for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) map[y][x]=d.map[y][x]|0; }
       if(d && d.player){ for(const k in d.player){ if(d.player.hasOwnProperty(k)) player[k]=d.player[k]; } }
       if(d && d.equipped){ equipped=d.equipped; }
@@ -1145,6 +1139,7 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
       if(d && d.world){ WORLD.current=d.world; applyTheme(WORLD.current==='main'?THEMES.main:THEMES.spawn); }
       if(WORLD.current==='spawn') ensureSpawnNpcs(); else NPCS.length=0;
       setPlayerPos(player.x,player.y); pathQueue.length=0; dead=false; deathOverlay.classList.add('hidden'); cv.style.filter=''; cv.style.opacity='';
+      selectedNpc=null;
       recomputeStats(false); draw(); renderCharIfOpen(); renderNpcValues(); toast('Caricato');
     }catch(e){ panic('load', e); }
   };
