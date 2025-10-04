@@ -491,7 +491,8 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   cv.addEventListener('pointerdown', onPointerDown, {passive:false});
   cv.addEventListener('pointerup', onPointerUp, {passive:false});
-  cv.addEventListener('click', onPointerUp, false);
+  /* FIX: rimosso listener 'click' duplicato che provocava doppia chiamata a onPointerUp e attivava l'autoChase con un solo click */
+  // cv.addEventListener('click', onPointerUp, false);
 
   window.addEventListener('keydown', (e)=>{
     if(e.code==='Space'||e.key===' '){
@@ -625,7 +626,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const now=performance.now(); player.lastAtk=now;
     const base=rndInt(player.atkMin,player.atkMax);
     const crit=rollCrit(getCritChance()); const mult=crit?getCritMult():1;
-    const dmg=Math.max(0, Math.floor(base*mult));
+       const dmg=Math.max(0, Math.floor(base*mult));
     t.hp=Math.max(0, t.hp-dmg);
     addDmgText(t.x,t.y,(crit?'CRIT ':'-')+dmg, crit?'#facc15':'#ffd166');
     if(t.hp===0){
@@ -1029,7 +1030,7 @@ window.addEventListener('DOMContentLoaded', () => {
             }
             if(distM<e.rangeMin && canMove){
               const backX=e.x + (player.x<e.x?1:(player.x>e.x?-1:0));
-              const backY=e.y + (player.y<e.y)?1:(player.y>e.y?-1:0);
+              const backY=e.y + (player.y<e.y?1:(player.y>e.y?-1:0));
               if(walkable(backX,backY) && !(backX===player.x&&backY===player.y)){
                 const fx=e.x, fy=e.y; e.x=backX; e.y=backY; startTween(e,fx,fy,e.x,e.y,now);
               } else {
@@ -1101,7 +1102,6 @@ window.addEventListener('DOMContentLoaded', () => {
           }
           if(pr.kind==='E'){
             pr.pierce--; if(pr.pierce<=0){ skillshots.splice(si,1); continue; }
-            // continua a volare
           }else{
             skillshots.splice(si,1);
             continue;
