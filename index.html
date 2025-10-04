@@ -747,67 +747,154 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   }
 
  
-  function drawPortals(){
-    const list=WORLD.portals[WORLD.current]||[];
-    ctx.save();
-    for(let i=0;i<list.length;i++){
-      const p=list[i];
-      ctx.fillStyle='#7c3aed'; ctx.globalAlpha=0.95; ctx.fillRect(p.x*TILE+6,p.y*TILE+6,TILE-12,TILE-12);
-      ctx.globalAlpha=0.35; ctx.fillRect(p.x*TILE+3,p.y*TILE+3,TILE-6,TILE-6);
+ function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+
+  // Tiles
+  for(let y=0;y<ROWS;y++){
+    for(let x=0;x<COLS;x++){
+      ctx.fillStyle = (map[y][x]===1) ? getVar('--block') : (((x+y)%2===0)?getVar('--tileA'):getVar('--tileB'));
+      ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
     }
-    ctx.restore();
   }
-  function drawActor(tx,ty,color){
-    const x=tx*TILE, y=ty*TILE;
-    ctx.fillStyle=getVar('--shadow'); ctx.beginPath(); ctx.ellipse(x+TILE/2,y+TILE-12,18,6,0,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle=color; ctx.fillRect(x+TILE/2-16,y+TILE/2-22,32,36);
+
+  // Portali
+  drawPortals();
+
+  // NPC (solo in spawn)
+  if(WORLD.current==='spawn'){
+    for(let i=0;i<NPCS.length;i++){
+      const n=NPCS[i];
+      drawNpc(n);
+    }
   }
-  function drawHpBar(tx,ty,hp,maxHp,isEnemy,isTarget){
-    const x=tx*TILE, y=ty*TILE, w=40, h=6, px=x+TILE/2-w/2, py=y+TILE/2-32;
-    const r=Math.max(0,Math.min(1,hp/maxHp));
-    let col='#10b981'; if(isEnemy){ if(r<0.66) col='#f59e0b'; if(r<0.33) col='#ef4444'; }
-    ctx.fillStyle=getVar('--hpBack'); ctx.fillRect(px,py,w,h);
-    ctx.fillStyle=col; ctx.fillRect(px,py,w*r,h);
-    ctx.strokeStyle=isTarget?'#f87171':'#0008'; ctx.lineWidth=isTarget?2:1; ctx.strokeRect(px,py,w,h); ctx.lineWidth=1;
+
+  // Nemici
+  for(let i=0;i<enemies.length;i++){
+    const e=enemies[i];
+    const ex = (e.vx!=null ? e.vx : e.x);
+    const ey = (e.vy!=null ? e.vy : e.y);
+    drawActor(ex,ey,getVar('--enemy'));
+    drawHpBar(ex,ey,e.hp,e.maxHp,true,(target===e));
+    if(target===e) drawTargetRing(ex,ey);
   }
-  function drawTargetRing(tx,ty){ const x=tx*TILE+TILE/2, y=ty*TILE+TILE/2; ctx.save(); ctx.strokeStyle='#ef4444'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(x,y,28,0,Math.PI*2); ctx.stroke(); ctx.restore(); }
-  function drawHudBtn(r, glyph, enabled, sub){
-    ctx.save(); ctx.globalAlpha=enabled?1:0.55; ctx.fillStyle='rgba(15,23,42,.85)'; ctx.strokeStyle='#1f2a44'; ctx.lineWidth=2; ctx.beginPath();
-    ctx.moveTo(r.x+12,r.y); ctx.arcTo(r.x+r.w,r.y,r.x+r.w,r.y+r.h,12); ctx.arcTo(r.x+r.w,r.y+r.h,r.x,r.y+r.h,12); ctx.arcTo(r.x,r.y+r.h,r.x,r.y,12); ctx.arcTo(r.x,r.y,r.x+r.w,r.y,12); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.font='28px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#e5e7eb'; ctx.fillText(glyph, r.x + r.w/2, r.y + r.h/2);
-    if(sub){ ctx.font='12px system-ui'; ctx.fillText(sub, r.x + r.w/2, r.y + r.h - 10); }
-    ctx.restore();
+
+  // Player
+  const pxv=(player.vx!=null?player.vx:player.x);
+  const pyv=(player.vy!=null?player.vy:player.y);
+  drawActor(pxv,pyv,getVar('--player'));
+  drawHpBar(pxv,pyv,player.hp,player.maxHp,false,false);
+
+  // Proiettili
+  for(let p=0;p<projectiles.length;p++){
+    const pr=projectiles[p];
+    const ptx=(pr.vx!=null?pr.vx:pr.x), pty=(pr.vy!=null?pr.vy:pr.y);
+    const x=ptx*TILE+TILE/2, y=pty*TILE+TILE/2;
+    ctx.fillStyle='#f87171';
+    ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
   }
-  function drawHud(){
-  drawHudBtn(HUD.atk,   '🗡️', (performance.now()-player.lastAtk)>=getAtkCd());
-  drawHudBtn(HUD.pot,   '🍵', player.pots>0);
-  const canDash=(performance.now()-player.lastDash)>=player.dashCd;
-  drawHudBtn(HUD.dash,  '⚡', canDash);
-  const canSkill=(performance.now()-player.lastSkill)>=player.skillCd;
-  drawHudBtn(HUD.skill, '🎯', canSkill);
-  drawHudBtn(HUD.char,  '👤', true);
+
+  // Danni fluttuanti + HUD
+  drawDmgTexts();
+  drawHud();
+
+  // Status bar
+  const need=(player.lvl<MAX_LVL)?xpNeeded(player.lvl):1;
+  const ratio=(player.lvl<MAX_LVL)?Math.min(1,player.exp/need):1;
+  const guardLeft=Math.max(0, teleportGuardUntil - performance.now())|0;
+  const aggroSilLeft=Math.max(0, entryAggroSilenceUntil - performance.now())|0;
+
+  statusEl.textContent =
+    `build:${BUILD} | LV ${player.lvl} ${player.lvl<MAX_LVL?('('+Math.floor(ratio*100)+'%)'):''} | ` +
+    `HP ${player.hp}/${player.maxHp} | ATK ${player.atkMin}–${player.atkMax} | monete ${player.coins} | ` +
+    `AggroSil ${aggroSilLeft}ms | TPGuard ${guardLeft}ms`;
+}
+
+function drawPortals(){
+  const list=WORLD.portals[WORLD.current]||[];
+  ctx.save();
+  for(let i=0;i<list.length;i++){
+    const p=list[i];
+    ctx.fillStyle='#7c3aed';
+    ctx.globalAlpha=0.95; ctx.fillRect(p.x*TILE+6,p.y*TILE+6,TILE-12,TILE-12);
+    ctx.globalAlpha=0.35; ctx.fillRect(p.x*TILE+3,p.y*TILE+3,TILE-6,TILE-6);
+  }
+  ctx.restore();
+}
+
+function drawActor(tx,ty,color){
+  const x=tx*TILE, y=ty*TILE;
+  ctx.fillStyle=getVar('--shadow');
+  ctx.beginPath(); ctx.ellipse(x+TILE/2,y+TILE-12,18,6,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=color; ctx.fillRect(x+TILE/2-16,y+TILE/2-22,32,36);
+}
+
+function drawHpBar(tx,ty,hp,maxHp,isEnemy,isTarget){
+  const x=tx*TILE, y=ty*TILE, w=40, h=6, px=x+TILE/2-w/2, py=y+TILE/2-32;
+  const r=Math.max(0,Math.min(1,hp/maxHp));
+  let col='#10b981';
+  if(isEnemy){
+    if(r<0.66) col='#f59e0b';
+    if(r<0.33) col='#ef4444';
+  }
+  ctx.fillStyle=getVar('--hpBack'); ctx.fillRect(px,py,w,h);
+  ctx.fillStyle=col; ctx.fillRect(px,py,w*r,h);
+  ctx.strokeStyle=isTarget?'#f87171':'#0008';
+  ctx.lineWidth=isTarget?2:1;
+  ctx.strokeRect(px,py,w,h);
+  ctx.lineWidth=1;
+}
+
+function drawTargetRing(tx,ty){
+  const x=tx*TILE+TILE/2, y=ty*TILE+TILE/2;
+  ctx.save();
+  ctx.strokeStyle='#ef4444'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.arc(x,y,28,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+}
+
+function drawHudBtn(r, glyph, enabled){
+  ctx.save();
+  ctx.globalAlpha=enabled?1:0.55;
+  ctx.fillStyle='rgba(15,23,42,.85)';
+  ctx.strokeStyle='#1f2a44'; ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(r.x+12,r.y);
+  ctx.arcTo(r.x+r.w,r.y,r.x+r.w,r.y+r.h,12);
+  ctx.arcTo(r.x+r.w,r.y+r.h,r.x,r.y+r.h,12);
+  ctx.arcTo(r.x,r.y+r.h,r.x,r.y,12);
+  ctx.arcTo(r.x,r.y,r.x+r.w,r.y,12);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.font='28px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#e5e7eb';
+  ctx.fillText(glyph, r.x + r.w/2, r.y + r.h/2);
+  ctx.restore();
+}
+
+function drawHud(){
+  drawHudBtn(HUD.atk, '🗡️', (performance.now()-player.lastAtk)>=getAtkCd());
+  drawHudBtn(HUD.pot, '🍵', player.pots>0);
+  drawHudBtn(HUD.char, '👤', true);
+
   if(destMarker && destMarker.ttl>0){
     const a=Math.min(1, destMarker.ttl/400);
     ctx.save(); ctx.globalAlpha=a; ctx.strokeStyle='#93c5fd'; ctx.lineWidth=2;
     const cx=destMarker.x*TILE+TILE/2, cy=destMarker.y*TILE+TILE/2;
-    ctx.beginPath(); ctx.arc(cx,cy,20,0,Math.PI*2); ctx.stroke(); ctx.restore();
+    ctx.beginPath(); ctx.arc(cx,cy,20,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
   }
 }
 
-  function drawNpc(n){
-    const x=n.x*TILE, y=n.y*TILE;
-    ctx.fillStyle=getVar('--shadow'); ctx.beginPath(); ctx.ellipse(x+TILE/2,y+TILE-10,16,6,0,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#6d28d9'; ctx.fillRect(x+TILE/2-16, y+TILE/2-22, 32, 36);
-    ctx.fillStyle='#eab308'; ctx.font='18px system-ui'; ctx.textAlign='center';
-    ctx.fillText('🧙‍♂️', x+TILE/2, y+TILE/2-10);
-    ctx.fillStyle='#e5e7eb'; ctx.font='12px system-ui'; ctx.fillText('Maestro', x+TILE/2, y+TILE/2+26);
-  }
-  function drawPlayerDebuffs(tx,ty){
-    if(player.status.bleed){
-      const x=tx*TILE+TILE/2, y=ty*TILE/2+8;
-      ctx.save(); ctx.font='16px system-ui'; ctx.textAlign='center'; ctx.fillStyle='#ef4444'; ctx.fillText('💧', x, ty*TILE+16); ctx.restore();
-    }
-  }
+function drawNpc(n){
+  const x=n.x*TILE, y=n.y*TILE;
+  ctx.fillStyle=getVar('--shadow');
+  ctx.beginPath(); ctx.ellipse(x+TILE/2,y+TILE-10,16,6,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#6d28d9'; ctx.fillRect(x+TILE/2-16, y+TILE/2-22, 32, 36);
+  ctx.fillStyle='#eab308'; ctx.font='18px system-ui'; ctx.textAlign='center';
+  ctx.fillText('🧙‍♂️', x+TILE/2, y+TILE/2-10);
+  ctx.fillStyle='#e5e7eb'; ctx.font='12px system-ui';
+  ctx.fillText('Maestro', x+TILE/2, y+TILE/2+26);
+}
+
 
   function updateTargetFrame(){}
 
