@@ -292,12 +292,13 @@ main{max-width:1400px;margin:14px auto;padding:12px;background:var(--panel);bord
   player.atkMin = Math.round(player.baseAtkMin + atkB);
   player.atkMax = Math.round(player.baseAtkMax + atkB);
 
-  if(heal) player.hp = player.maxHp;
-  if(player.hp > player.maxHp) player.hp = player.maxHp;
+  if (heal) player.hp = player.maxHp;
+  if (player.hp > player.maxHp) player.hp = player.maxHp;
 
   renderCharIfOpen();
   renderNpcValues();
 }
+
 
   let enemies=[], projectiles=[];
   let _eid=1; function giveId(e){ e.id=_eid++; return e; }
